@@ -18,7 +18,7 @@ CRGB leds[NUM_LEDS];
 // Arduino pin used for Data
 #define DATA_PIN 2
 
-#define BTN_MIN_PRESSTIME 150   //ms button to be pressed before action
+#define BTN_MIN_PRESSTIME 95   //ms button to be pressed before action
 #define TIMEOUT_SET_MODE 60000  //ms no button pressed
 
 #define SET_MODE_OFF 1
@@ -27,9 +27,9 @@ CRGB leds[NUM_LEDS];
 #define SET_MODE_MONTH 8
 #define SET_MODE_YEAR 16
 #define SET_MODE_HOURS 32
-#define SET_MODE_5MINUTES 256
-#define SET_MODE_1MINUTES 512
-#define SET_MODE_MAX 512
+#define SET_MODE_5MINUTES 64
+#define SET_MODE_1MINUTES 128
+#define SET_MODE_MAX 128
 #define START_WITH_YEAR 2015
 
 #define MIN_BRIGHTNESS 25        // 16 is minimum
@@ -41,7 +41,7 @@ CRGB leds[NUM_LEDS];
 
 #define BRIGHNTNESS_SENSOR_PIN 2
 
-uint8_t setMode = SET_MODE_OFF;
+int setMode = SET_MODE_OFF;
 int brightnessVal = 37;  // Default hue
 
 int wmone[] = {66};
@@ -149,13 +149,19 @@ void nextStep(struct ts *t) {
   confirmationLEDFlash();
   if (setMode == SET_MODE_DAY) {
     Serial.println("Set next day");
-    showDay(t->mday++);
+    t->mday+=1;
+    if (t->mday > 31) t->mday = 1;
+    showDay(t->mday);
   } else   if (setMode == SET_MODE_MONTH) {
     Serial.println("Set next month");
-    showMonth(t->mon++);
+    t->mon+=1;
+    if (t->mon > 12) t->mon = 1;
+    showMonth(t->mon);
   } else   if (setMode == SET_MODE_YEAR) {
     Serial.println("Set next year");
-    showYear(t->year++);
+    t->year+=1;
+    if (t->year > 2020) t->year = START_WITH_YEAR;
+    showYear(t->year);
   } else   if (setMode == SET_MODE_HOURS) {
     Serial.println("Set next hour");
     t->hour++;
@@ -171,7 +177,7 @@ void nextStep(struct ts *t) {
     t->min+=1;
     if (t->min > 60) t->min = 0;
     showTime(t->hour, t->min);
-  } else   if (setMode == SET_MODE_LEDTEST) {
+  } else if (setMode == SET_MODE_LEDTEST) {
     if ((t->min%5) == 0) {
       t->min+=2;
     } else {
@@ -202,7 +208,7 @@ void nextSetMode(struct ts *t) {
     showAllWordsSeq();
   } else if (setMode == SET_MODE_DAY) {
     t->mday;
-    t->mon=0;
+    t->mon;
     t->year=START_WITH_YEAR;
     showDay(t->mday);
   } else if (setMode == SET_MODE_MONTH) {
@@ -217,7 +223,10 @@ void nextSetMode(struct ts *t) {
   
   Serial.print("Switching to setMode: ");
   Serial.println(setMode);
+  
   if (setMode == SET_MODE_OFF) {
+    Serial.print("Setting new Date & Time to: ");
+    printRTCDataStruct(t);
     DS3231_set(*t);
     digitalWrite(INTERNAL_LED_PIN, LOW);
   } else {
@@ -246,10 +255,20 @@ void getRTCData(struct ts *t) {
     char buff[BUFF_MAX];
    
     DS3231_get(t); //Get time
+
+    printRTCDataStruct(t);
+    
     parse_cmd("C",1);
     temperature = DS3231_get_treg(); //Get temperature
     dtostrf(temperature, 5, 1, tempF);
 
+    Serial.print(' ');
+    Serial.print(tempF);
+    Serial.print((char)223);
+    Serial.println("C ");
+}
+
+void printRTCDataStruct(struct ts *t) {
     Serial.print(t->mday);
     
     printMonth(t->mon);
@@ -268,12 +287,8 @@ void getRTCData(struct ts *t) {
     {
       Serial.print("0");
     }
-    Serial.print(t->sec);
+    Serial.println(t->sec);
     
-    Serial.print(' ');
-    Serial.print(tempF);
-    Serial.print((char)223);
-    Serial.print("C ");
 }
 
 void pushBtnState() {
@@ -513,7 +528,7 @@ void showWord(int wordLeds[], int elementCount) {
 void showDay(int day) {
   FastLED.clear();
   for(byte i = 0; i < day; i++) {
-    leds[i] = CHSV( 0, 0, brightnessVal); 
+    leds[i] = CRGB( 255, 0, 0); 
   }
   FastLED.show();
 }
@@ -521,15 +536,15 @@ void showDay(int day) {
 void showMonth(int month) {
   FastLED.clear();
   for(byte i = 0; i < month; i++) {
-    leds[i] = CHSV( 0, 0, brightnessVal); 
+    leds[i] = CRGB( 0, 255, 0); 
   }
   FastLED.show();
 }
   
 void showYear(int year) {
   FastLED.clear();
-  for(byte i = 0; i < year-START_WITH_YEAR; i++) {
-    leds[i] = CHSV( 0, 0, brightnessVal); 
+  for(byte i = 0; i < year-2000; i++) {
+    leds[i] = CRGB( 0, 0, 255); 
   }
   FastLED.show();
 }
@@ -624,8 +639,8 @@ void parse_cmd(char *cmd, int cmdsize)
         DS3231_get_a2(&buff[0], 59);
         Serial.println(buff);
     } else if (cmd[0] == 67 && cmdsize == 1) {  // "C" - get temperature register
-        Serial.print("temperature reg is ");
-        Serial.println(DS3231_get_treg(), DEC);
+        //Serial.print("temperature reg is ");
+        //Serial.println(DS3231_get_treg(), DEC);
     } else if (cmd[0] == 68 && cmdsize == 1) {  // "D" - reset status register alarm flags
         reg_val = DS3231_get_sreg();
         reg_val &= B11111100;
