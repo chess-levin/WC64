@@ -44,28 +44,28 @@ CRGB leds[NUM_LEDS];
 int setMode = SET_MODE_OFF;
 int brightnessVal = 37;  // Default hue
 
-int wmone[] = {66};
-int wmtwo[] = {66,65};
-int wmthree[] = {66,65,64};
-int wmfour[] = {66,65,64,67};
-int wmfive[] = {0,1,2,3};
-int wmten[] = {4,5,6,7};
-int wmfiveten[] = {0,1,2,3,4,5,6,7};
-int wto[] = {13,14,15};
-int wpast[] = {9,10,11,12};
-int whalf[] = {16,17,18,19};
-int whone[] = {28,29,30,31};
-int whtwo[] = {35,36,41,42};
-int whthree[] = {41,42,43,44};
-int whfour[] = {20,21,22,23};
-int whfive[] = {39,40,55,56};
-int whsix[] = {24,25,26,27,28};
-int whseven[] = {32,33,34,47,46,45};
-int wheight[] = {63,62,61,60};
-int whnine[] = {52,53,54,55};
-int whten[] = {49,50,51,52};
-int wheleven[] = {56,57,58};
-int whtwelve[] = {35,36,37,38,39};
+uint8_t wmone[] = {66};
+uint8_t wmtwo[] = {66,65};
+uint8_t wmthree[] = {66,65,64};
+uint8_t wmfour[] = {66,65,64,67};
+uint8_t wmfive[] = {0,1,2,3};
+uint8_t wmten[] = {4,5,6,7};
+uint8_t wmfiveten[] = {0,1,2,3,4,5,6,7};
+uint8_t wto[] = {13,14,15};
+uint8_t wpast[] = {9,10,11,12};
+uint8_t whalf[] = {16,17,18,19};
+uint8_t whone[] = {28,29,30,31};
+uint8_t whtwo[] = {35,36,41,42};
+uint8_t whthree[] = {41,42,43,44};
+uint8_t whfour[] = {20,21,22,23};
+uint8_t whfive[] = {39,40,55,56};
+uint8_t whsix[] = {24,25,26,27,28};
+uint8_t whseven[] = {32,33,34,47,46,45};
+uint8_t wheight[] = {63,62,61,60};
+uint8_t whnine[] = {52,53,54,55};
+uint8_t whten[] = {49,50,51,52};
+uint8_t wheleven[] = {56,57,58};
+uint8_t whtwelve[] = {35,36,37,38,39};
 
 void setup() {
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
@@ -444,25 +444,25 @@ int showMinutes(int minutes) {
   }
    
   switch (tidx) {
-    case 5: showWord(wmfive, sizeof(wmfive) / sizeof(int)); break;
-    case 10: showWord(wmten, sizeof(wmten) / sizeof(int)); break;
-    case 15: showWord(wmfiveten, sizeof(wmfiveten) / sizeof(int)); break;
+    case 5: showWord(wmfive, sizeof(wmfive) / sizeof(uint8_t)); break;
+    case 10: showWord(wmten, sizeof(wmten) / sizeof(uint8_t)); break;
+    case 15: showWord(wmfiveten, sizeof(wmfiveten) / sizeof(uint8_t)); break;
   }
   
   switch (ridx) {
-    case 1: showWord(wpast, sizeof(wpast) / sizeof(int)); break;
-    case 2: showWord(wto, sizeof(wto) / sizeof(int)); break;
+    case 1: showWord(wpast, sizeof(wpast) / sizeof(uint8_t)); break;
+    case 2: showWord(wto, sizeof(wto) / sizeof(uint8_t)); break;
   }
 
   switch (qidx) {
-    case 1: showWord(whalf, sizeof(whalf) / sizeof(int)); break;
+    case 1: showWord(whalf, sizeof(whalf) / sizeof(uint8_t)); break;
   }
   
   switch (showMinutes % 5) {
-    case 1:showWord(wmone, sizeof(wmone) / sizeof(int)); break;
-    case 2:showWord(wmtwo, sizeof(wmtwo) / sizeof(int)); break;
-    case 3:showWord(wmthree, sizeof(wmthree) / sizeof(int)); break;
-    case 4:showWord(wmfour, sizeof(wmfour) / sizeof(int)); break;
+    case 1:showWord(wmone, sizeof(wmone) / sizeof(uint8_t)); break;
+    case 2:showWord(wmtwo, sizeof(wmtwo) / sizeof(uint8_t)); break;
+    case 3:showWord(wmthree, sizeof(wmthree) / sizeof(uint8_t)); break;
+    case 4:showWord(wmfour, sizeof(wmfour) / sizeof(uint8_t)); break;
   }
   
   if (minutes < 20) {
@@ -477,45 +477,45 @@ void showHours(int hours) {
     hours -= 12;
   }
   switch (hours ) {
-    case 0: showWord(whtwelve, sizeof(whtwelve) / sizeof(int)); break;
-    case 1: showWord(whone, sizeof(whone) / sizeof(int)); break;
-    case 2: showWord(whtwo, sizeof(whtwo) / sizeof(int)); break;
-    case 3: showWord(whthree, sizeof(whthree) / sizeof(int)); break;
-    case 4: showWord(whfour, sizeof(whfour) / sizeof(int)); break;
-    case 5: showWord(whfive, sizeof(whfive) / sizeof(int)); break;
-    case 6: showWord(whsix, sizeof(whsix) / sizeof(int)); break;
-    case 7: showWord(whseven, sizeof(whseven) / sizeof(int)); break;
-    case 8: showWord(wheight, sizeof(wheight) / sizeof(int)); break;
-    case 9: showWord(whnine, sizeof(whnine) / sizeof(int)); break;
-    case 10: showWord(whten, sizeof(whten) / sizeof(int)); break;
-    case 11: showWord(wheleven, sizeof(wheleven) / sizeof(int)); break;
-    case 12: showWord(whtwelve, sizeof(whtwelve) / sizeof(int)); break;
+    case 0: showWord(whtwelve, sizeof(whtwelve) / sizeof(uint8_t)); break;
+    case 1: showWord(whone, sizeof(whone) / sizeof(uint8_t)); break;
+    case 2: showWord(whtwo, sizeof(whtwo) / sizeof(uint8_t)); break;
+    case 3: showWord(whthree, sizeof(whthree) / sizeof(uint8_t)); break;
+    case 4: showWord(whfour, sizeof(whfour) / sizeof(uint8_t)); break;
+    case 5: showWord(whfive, sizeof(whfive) / sizeof(uint8_t)); break;
+    case 6: showWord(whsix, sizeof(whsix) / sizeof(uint8_t)); break;
+    case 7: showWord(whseven, sizeof(whseven) / sizeof(uint8_t)); break;
+    case 8: showWord(wheight, sizeof(wheight) / sizeof(uint8_t)); break;
+    case 9: showWord(whnine, sizeof(whnine) / sizeof(uint8_t)); break;
+    case 10: showWord(whten, sizeof(whten) / sizeof(uint8_t)); break;
+    case 11: showWord(wheleven, sizeof(wheleven) / sizeof(uint8_t)); break;
+    case 12: showWord(whtwelve, sizeof(whtwelve) / sizeof(uint8_t)); break;
   }
 }
   
 void showAllWordsSeq() {
-  showWord(wmfive, sizeof(wmfive) / sizeof(int));
-  showWord(wmten, sizeof(wmten) / sizeof(int));
-  showWord(wto, sizeof(wto) / sizeof(int));
-  showWord(wpast, sizeof(wpast) / sizeof(int)); 
-  showWord(whalf, sizeof(whalf) / sizeof(int));
-  showWord(whone, sizeof(whone) / sizeof(int));
-  showWord(whtwo, sizeof(whtwo) / sizeof(int)); 
-  showWord(whthree, sizeof(whthree) / sizeof(int));
-  showWord(whfour, sizeof(whfour) / sizeof(int));
-  showWord(whfive, sizeof(wmfive) / sizeof(int));
-  showWord(whsix, sizeof(whsix) / sizeof(int)); 
-  showWord(whseven, sizeof(whseven) / sizeof(int));
-  showWord(wheight, sizeof(wheight) / sizeof(int)); 
-  showWord(whnine, sizeof(whnine) / sizeof(int));
-  showWord(whten, sizeof(whten) / sizeof(int)); 
-  showWord(wheleven, sizeof(wheleven) / sizeof(int));
-  showWord(whtwelve, sizeof(whtwelve) / sizeof(int));
-  showWord(wmfour, sizeof(wmfour) / sizeof(int));
-  showWord(wmone, sizeof(wmone) / sizeof(int));
-  showWord(wmtwo, sizeof(wmtwo) / sizeof(int));
-  showWord(wmthree, sizeof(wmthree) / sizeof(int));
-  showWord(wmfour, sizeof(wmfour) / sizeof(int));
+  showWord(wmfive, sizeof(wmfive) / sizeof(uint8_t));
+  showWord(wmten, sizeof(wmten) / sizeof(uint8_t));
+  showWord(wto, sizeof(wto) / sizeof(uint8_t));
+  showWord(wpast, sizeof(wpast) / sizeof(uint8_t)); 
+  showWord(whalf, sizeof(whalf) / sizeof(uint8_t));
+  showWord(whone, sizeof(whone) / sizeof(uint8_t));
+  showWord(whtwo, sizeof(whtwo) / sizeof(uint8_t)); 
+  showWord(whthree, sizeof(whthree) / sizeof(uint8_t));
+  showWord(whfour, sizeof(whfour) / sizeof(uint8_t));
+  showWord(whfive, sizeof(wmfive) / sizeof(uint8_t));
+  showWord(whsix, sizeof(whsix) / sizeof(uint8_t)); 
+  showWord(whseven, sizeof(whseven) / sizeof(uint8_t));
+  showWord(wheight, sizeof(wheight) / sizeof(uint8_t)); 
+  showWord(whnine, sizeof(whnine) / sizeof(uint8_t));
+  showWord(whten, sizeof(whten) / sizeof(uint8_t)); 
+  showWord(wheleven, sizeof(wheleven) / sizeof(uint8_t));
+  showWord(whtwelve, sizeof(whtwelve) / sizeof(uint8_t));
+  showWord(wmfour, sizeof(wmfour) / sizeof(uint8_t));
+  showWord(wmone, sizeof(wmone) / sizeof(uint8_t));
+  showWord(wmtwo, sizeof(wmtwo) / sizeof(uint8_t));
+  showWord(wmthree, sizeof(wmthree) / sizeof(uint8_t));
+  showWord(wmfour, sizeof(wmfour) / sizeof(uint8_t));
 }
 
 void showWord(int wordLeds[], int elementCount) {  
@@ -663,49 +663,3 @@ void parse_cmd(char *cmd, int cmdsize)
     }
 }
 
-/*
-void poti() {
-  int val = analogRead(potPin);    // read the value from the sensor
-  Serial.println(val);
-  digitalWrite(INTERNAL_LED_PIN, HIGH);  // turn the INTERNAL_LED_PIN on
-  delay(val);                  // stop the program for some time
-  digitalWrite(INTERNAL_LED_PIN, LOW);   // turn the INTERNAL_LED_PIN off
-  delay(val);    
-}
- 
-void potiBar() {
-  int val = analogRead(2);
-    int numLedsToLight = map(val, 0, 1023, 0, NUM_LEDS);
-
-    // First, clear the existing led values
-    FastLED.clear();
-    for(int led = 0; led < numLedsToLight; led++) { 
-        leds[led] = CRGB::Blue; 
-    }
-    FastLED.show();  
-}
-
-void snake() {
-  for(int dot = 0; dot < NUM_LEDS; dot++) { 
-      leds[dot] = CRGB::Blue;
-      FastLED.show();
-      // clear this led for the next time around the loop
-      leds[dot] = CRGB::Black;
-      delay(30);
-   }
-}
-
-void initTest() {
-  leds[0] = CRGB::Red; 
-  FastLED.show(); 
-  delay(30);
-  
-  leds[1] = CRGB::Green; 
-  FastLED.show(); 
-  delay(30);
-  
-  leds[2] = CRGB::Blue; 
-  FastLED.show(); 
-  delay(30);
-}
-*/
