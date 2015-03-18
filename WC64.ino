@@ -18,6 +18,8 @@ CRGB leds[NUM_LEDS];
 // Arduino pin used for Data
 #define DATA_PIN 2
 
+#define showWordMacro(wordArray)  (showWord(wordArray, sizeof(wordArray) / sizeof(uint8_t)))
+
 #define BTN_MIN_PRESSTIME 95   //ms button to be pressed before action
 #define TIMEOUT_SET_MODE 60000  //ms no button pressed
 
@@ -444,25 +446,25 @@ int showMinutes(int minutes) {
   }
    
   switch (tidx) {
-    case 5: showWord(wmfive, sizeof(wmfive) / sizeof(uint8_t)); break;
-    case 10: showWord(wmten, sizeof(wmten) / sizeof(uint8_t)); break;
-    case 15: showWord(wmfiveten, sizeof(wmfiveten) / sizeof(uint8_t)); break;
+    case 5: showWordMacro(wmfive); break;
+    case 10: showWordMacro(wmten); break;
+    case 15: showWordMacro(wmfiveten); break;
   }
   
   switch (ridx) {
-    case 1: showWord(wpast, sizeof(wpast) / sizeof(uint8_t)); break;
-    case 2: showWord(wto, sizeof(wto) / sizeof(uint8_t)); break;
+    case 1: showWordMacro(wpast); break;
+    case 2: showWordMacro(wto); break;
   }
 
   switch (qidx) {
-    case 1: showWord(whalf, sizeof(whalf) / sizeof(uint8_t)); break;
+    case 1: showWordMacro(whalf); break;
   }
   
   switch (showMinutes % 5) {
-    case 1:showWord(wmone, sizeof(wmone) / sizeof(uint8_t)); break;
-    case 2:showWord(wmtwo, sizeof(wmtwo) / sizeof(uint8_t)); break;
-    case 3:showWord(wmthree, sizeof(wmthree) / sizeof(uint8_t)); break;
-    case 4:showWord(wmfour, sizeof(wmfour) / sizeof(uint8_t)); break;
+    case 1:showWordMacro(wmone); break;
+    case 2:showWordMacro(wmtwo); break;
+    case 3:showWordMacro(wmthree); break;
+    case 4:showWordMacro(wmfour); break;
   }
   
   if (minutes < 20) {
@@ -477,48 +479,48 @@ void showHours(int hours) {
     hours -= 12;
   }
   switch (hours ) {
-    case 0: showWord(whtwelve, sizeof(whtwelve) / sizeof(uint8_t)); break;
-    case 1: showWord(whone, sizeof(whone) / sizeof(uint8_t)); break;
-    case 2: showWord(whtwo, sizeof(whtwo) / sizeof(uint8_t)); break;
-    case 3: showWord(whthree, sizeof(whthree) / sizeof(uint8_t)); break;
-    case 4: showWord(whfour, sizeof(whfour) / sizeof(uint8_t)); break;
-    case 5: showWord(whfive, sizeof(whfive) / sizeof(uint8_t)); break;
-    case 6: showWord(whsix, sizeof(whsix) / sizeof(uint8_t)); break;
-    case 7: showWord(whseven, sizeof(whseven) / sizeof(uint8_t)); break;
-    case 8: showWord(wheight, sizeof(wheight) / sizeof(uint8_t)); break;
-    case 9: showWord(whnine, sizeof(whnine) / sizeof(uint8_t)); break;
-    case 10: showWord(whten, sizeof(whten) / sizeof(uint8_t)); break;
-    case 11: showWord(wheleven, sizeof(wheleven) / sizeof(uint8_t)); break;
-    case 12: showWord(whtwelve, sizeof(whtwelve) / sizeof(uint8_t)); break;
+    case 0: showWordMacro(whtwelve); break;
+    case 1: showWordMacro(whone); break;
+    case 2: showWordMacro(whtwo); break;
+    case 3: showWordMacro(whthree); break;
+    case 4: showWordMacro(whfour); break;
+    case 5: showWordMacro(whfive); break;
+    case 6: showWordMacro(whsix); break;
+    case 7: showWordMacro(whseven); break;
+    case 8: showWordMacro(wheight); break;
+    case 9: showWordMacro(whnine); break;
+    case 10: showWordMacro(whten); break;
+    case 11: showWordMacro(wheleven); break;
+    case 12: showWordMacro(whtwelve); break;
   }
 }
   
 void showAllWordsSeq() {
-  showWord(wmfive, sizeof(wmfive) / sizeof(uint8_t));
-  showWord(wmten, sizeof(wmten) / sizeof(uint8_t));
-  showWord(wto, sizeof(wto) / sizeof(uint8_t));
-  showWord(wpast, sizeof(wpast) / sizeof(uint8_t)); 
-  showWord(whalf, sizeof(whalf) / sizeof(uint8_t));
-  showWord(whone, sizeof(whone) / sizeof(uint8_t));
-  showWord(whtwo, sizeof(whtwo) / sizeof(uint8_t)); 
-  showWord(whthree, sizeof(whthree) / sizeof(uint8_t));
-  showWord(whfour, sizeof(whfour) / sizeof(uint8_t));
-  showWord(whfive, sizeof(wmfive) / sizeof(uint8_t));
-  showWord(whsix, sizeof(whsix) / sizeof(uint8_t)); 
-  showWord(whseven, sizeof(whseven) / sizeof(uint8_t));
-  showWord(wheight, sizeof(wheight) / sizeof(uint8_t)); 
-  showWord(whnine, sizeof(whnine) / sizeof(uint8_t));
-  showWord(whten, sizeof(whten) / sizeof(uint8_t)); 
-  showWord(wheleven, sizeof(wheleven) / sizeof(uint8_t));
-  showWord(whtwelve, sizeof(whtwelve) / sizeof(uint8_t));
-  showWord(wmfour, sizeof(wmfour) / sizeof(uint8_t));
-  showWord(wmone, sizeof(wmone) / sizeof(uint8_t));
-  showWord(wmtwo, sizeof(wmtwo) / sizeof(uint8_t));
-  showWord(wmthree, sizeof(wmthree) / sizeof(uint8_t));
-  showWord(wmfour, sizeof(wmfour) / sizeof(uint8_t));
+  showWordMacro(wmfive);
+  showWordMacro(wmten);
+  showWordMacro(wto);
+  showWordMacro(wpast); 
+  showWordMacro(whalf);
+  showWordMacro(whone);
+  showWordMacro(whtwo); 
+  showWordMacro(whthree);
+  showWordMacro(whfour);
+  showWordMacro(whfive);
+  showWordMacro(whsix); 
+  showWordMacro(whseven);
+  showWordMacro(wheight); 
+  showWordMacro(whnine);
+  showWordMacro(whten); 
+  showWordMacro(wheleven);
+  showWordMacro(whtwelve);
+  showWordMacro(wmfour);
+  showWordMacro(wmone);
+  showWordMacro(wmtwo);
+  showWordMacro(wmthree);
+  showWordMacro(wmfour);
 }
 
-void showWord(int wordLeds[], int elementCount) {  
+void showWord(uint8_t wordLeds[], int elementCount) {  
     for(int i = 0; i < elementCount; i++) {
       leds[wordLeds[i]] = CHSV( 0, 0, brightnessVal); 
     }
