@@ -18,8 +18,6 @@ CRGB leds[NUM_LEDS];
 // Arduino pin used for Data
 #define DATA_PIN 2
 
-#define showWordMacro(wordArray)  (showWord(wordArray, sizeof(wordArray) / sizeof(uint8_t)))
-
 #define BTN_MIN_PRESSTIME 95   //ms button to be pressed before action
 #define TIMEOUT_SET_MODE 60000  //ms no button pressed
 
@@ -48,16 +46,6 @@ int brightnessVal = 37;  // Default hue
 
 #define TERM 255
 
-uint8_t wmone[] = {66,TERM};
-uint8_t wmtwo[] = {66,65,TERM};
-uint8_t wmthree[] = {66,65,64,TERM};
-uint8_t wmfour[] = {66,65,64,67,TERM};
-uint8_t wmfive[] = {0,1,2,3,TERM};
-uint8_t wmten[] = {4,5,6,7,TERM};
-uint8_t wmfiveten[] = {0,1,2,3,4,5,6,7,TERM};
-uint8_t wto[] = {13,14,15,TERM};
-uint8_t wpast[] = {9,10,11,12,TERM};
-uint8_t whalf[] = {16,17,18,19,TERM};
 uint8_t whone[] = {28,29,30,31,TERM};
 uint8_t whtwo[] = {35,36,41,42,TERM};
 uint8_t whthree[] = {41,42,43,44,TERM};
@@ -72,6 +60,30 @@ uint8_t wheleven[] = {56,57,58,TERM};
 uint8_t whtwelve[] = {35,36,37,38,39,TERM};
 
 uint8_t* whours[] = {whone, whtwo, whthree, whfour, whfive, whsix, whseven, wheight, whnine, whten, wheleven, whtwelve};
+
+uint8_t wmone[] = {66,TERM};
+uint8_t wmtwo[] = {66,65,TERM};
+uint8_t wmthree[] = {66,65,64,TERM};
+uint8_t wmfour[] = {66,65,64,67,TERM};
+uint8_t wmfive[] = {0,1,2,3,TERM};
+uint8_t wmten[] = {4,5,6,7,TERM};
+uint8_t wmfiveten[] = {0,1,2,3,4,5,6,7,TERM};
+
+#define mfive_idx 4
+#define mten_idx 5
+#define mfiveten_idx 6
+
+uint8_t* wminutes[] = {wmone, wmtwo, wmthree, wmfour, wmfive, wmten, wmfiveten};
+
+uint8_t wto[] = {13,14,15,TERM};
+uint8_t wpast[] = {9,10,11,12,TERM};
+uint8_t whalf[] = {16,17,18,19,TERM};
+
+#define mto_idx 0
+#define mpast_idx 1
+#define mhalf_idx 2
+
+uint8_t* wtime[] = {wto, wpast, whalf};
 
 void setup() {
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
@@ -297,18 +309,6 @@ void printRTCDataStruct(struct ts *t) {
     
 }
 
-void pushBtnState() {
-  int val = digitalRead(SET_BTN1_PIN);  // read input value
-  if (val == HIGH) {         // check if the input is HIGH (button released)
-    digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
-  } else {
-    while(digitalRead(SET_BTN1_PIN) == LOW) {
-      digitalWrite(INTERNAL_LED_PIN, HIGH);  // turn LED ON
-    }
-  }
-  digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
-}
-
 void wait4PushBtnState() {
   int val = digitalRead(SET_BTN1_PIN);  // read input value
   while (val == HIGH) {         // check if the input is HIGH (button released)
@@ -375,160 +375,149 @@ void showTime(int hours, int minutes) {
 
 int showMinutes(int minutes) {
   
-  int tidx = 0; // 5, 10, 15
-  int ridx = 0; // 1 nach , 2 vor 
-  int qidx = 0; // 1 halb
+  int tidx = -1; // 5, 10, 15
+  int ridx = -1; // 1 nach , 2 vor 
+  int qidx = -1; // 1 halb
   int showMinutes = minutes;
   
   if (minutes == 0) {
   } else if (minutes < 5) {
-    tidx = 0;
-    ridx = 1;
+    ridx = mpast_idx;
   } else if (minutes < 10) {
-    tidx = 5;
-    ridx = 1;
+    tidx = mfive_idx;
+    ridx = mpast_idx;
   } else if (minutes < 15) {
-    tidx = 10;
-    ridx = 1;
+    tidx = mten_idx;
+    ridx = mpast_idx;
   } else if (minutes < 20) {
-    tidx = 15;
-    ridx = 1;
+    tidx = mfiveten_idx;
+    ridx = mpast_idx;
   } else if (minutes == 20) {
-    tidx = 10;
-    ridx = 2;
-    qidx = 1;
+    tidx = mten_idx;
+    ridx = mto_idx;
+    qidx = mhalf_idx;
   } else if (minutes < 25) {
-    tidx = 5;
-    ridx = 2;
-    qidx = 1;
+    tidx = mfive_idx;
+    ridx = mto_idx;
+    qidx = mhalf_idx;
     showMinutes = 25 - minutes;
   } else if (minutes == 25) {
-    tidx = 5;
-    ridx = 2;
-    qidx = 1;
+    tidx = mfive_idx;
+    ridx = mto_idx;
+    qidx = mhalf_idx;
   } else if (minutes < 30) {
-    ridx = 2;
-    qidx = 1;
+    ridx = mto_idx;
+    qidx = mhalf_idx;
     showMinutes = 30 - minutes;
   } else if (minutes == 30) {
-    qidx = 1;  
+    qidx = mhalf_idx;  
   } else if (minutes < 35) {
-    qidx = 1;  
-    ridx = 1;
+    qidx = mhalf_idx;  
+    ridx = mpast_idx;
   } else if (minutes < 40) {
-    tidx = 5;
-    ridx = 1;
-    qidx = 1;  
+    tidx = mfive_idx;
+    ridx = mpast_idx;
+    qidx = mhalf_idx;  
   } else if (minutes == 40) {
-    tidx = 10;
-    ridx = 1;
-    qidx = 1;  
+    tidx = mten_idx;
+    ridx = mpast_idx;
+    qidx = mhalf_idx;  
   } else if (minutes < 45) {
-    tidx = 15;
-    ridx = 2;
+    tidx = mfiveten_idx;
+    ridx = mto_idx;
     showMinutes = 45 - minutes;
   } else if (minutes == 45) {
-    tidx = 15;
-    ridx = 2;
+    tidx = mfiveten_idx;
+    ridx = mto_idx;
   } else if (minutes < 50) {
-    tidx = 10;
-    ridx = 2;
+    tidx = mten_idx;
+    ridx = mto_idx;
     showMinutes = 50 - minutes;
   } else if (minutes == 50) {
-    tidx = 10;
-    ridx = 2;
+    tidx = mten_idx;
+    ridx = mto_idx;
   } else if (minutes < 55) {
-    tidx = 5;
-    ridx = 2;
+    tidx = mfive_idx;
+    ridx = mto_idx;
     showMinutes = 55 - minutes;
   } else if (minutes == 55) {
-    tidx = 5;
-    ridx = 2;
+    tidx = mfive_idx;
+    ridx = mto_idx;
   } else if (minutes < 60) {
     showMinutes = 60 - minutes;
-    ridx = 2;
-  }
-   
-  switch (tidx) {
-    case 5: showWordMacro(wmfive); break;
-    case 10: showWordMacro(wmten); break;
-    case 15: showWordMacro(wmfiveten); break;
+    ridx = mto_idx;
   }
   
-  switch (ridx) {
-    case 1: showWordMacro(wpast); break;
-    case 2: showWordMacro(wto); break;
+  if (tidx>=0) {
+    showWord(wminutes[tidx]);
+  }
+  
+  if (ridx>=0) {
+    showWord(wtime[ridx]);
   }
 
-  switch (qidx) {
-    case 1: showWordMacro(whalf); break;
+  if (qidx>=0) {
+    showWord(wtime[qidx]);
   }
-  
-  switch (showMinutes % 5) {
-    case 1:showWordMacro(wmone); break;
-    case 2:showWordMacro(wmtwo); break;
-    case 3:showWordMacro(wmthree); break;
-    case 4:showWordMacro(wmfour); break;
+
+  if ((showMinutes % 5) > 0) {
+    showWord(wminutes[(showMinutes % 5)-1]);
   }
   
   if (minutes < 20) {
     return 0;
   } else {
-      return 1;
-   }
+    return 1;
+  }
 }
 
 void showHours(int hours) {
   if (hours > 12) {
     hours -= 12;
   }
-  switch (hours ) {
-    case 0: showWordMacro(whtwelve); break;
-    case 1: showWordMacro(whone); break;
-    case 2: showWordMacro(whtwo); break;
-    case 3: showWordMacro(whthree); break;
-    case 4: showWordMacro(whfour); break;
-    case 5: showWordMacro(whfive); break;
-    case 6: showWordMacro(whsix); break;
-    case 7: showWordMacro(whseven); break;
-    case 8: showWordMacro(wheight); break;
-    case 9: showWordMacro(whnine); break;
-    case 10: showWordMacro(whten); break;
-    case 11: showWordMacro(wheleven); break;
-    case 12: showWordMacro(whtwelve); break;
-  }
+  
+  showWord(whours[hours-1]);
 }
   
 void showAllWordsSeq() {
-  showWordMacro(wmfive);
-  showWordMacro(wmten);
-  showWordMacro(wto);
-  showWordMacro(wpast); 
-  showWordMacro(whalf);
-  showWordMacro(whone);
-  showWordMacro(whtwo); 
-  showWordMacro(whthree);
-  showWordMacro(whfour);
-  showWordMacro(whfive);
-  showWordMacro(whsix); 
-  showWordMacro(whseven);
-  showWordMacro(wheight); 
-  showWordMacro(whnine);
-  showWordMacro(whten); 
-  showWordMacro(wheleven);
-  showWordMacro(whtwelve);
-  showWordMacro(wmfour);
-  showWordMacro(wmone);
-  showWordMacro(wmtwo);
-  showWordMacro(wmthree);
-  showWordMacro(wmfour);
+  showWord(wminutes[0]);
+  showWord(wminutes[1]);
+  showWord(wminutes[2]);
+  showWord(wminutes[3]);
+  showWord(wminutes[mfive_idx]);
+  showWord(wminutes[mten_idx]);
+  showWord(wminutes[mfiveten_idx]);
+  showWord(wtime[mto_idx]);
+  showWord(wtime[mpast_idx]); 
+  showWord(wtime[mhalf_idx]);
+  showWord(whours[0]);
+  showWord(whours[1]); 
+  showWord(whours[2]);
+  showWord(whours[3]);
+  showWord(whours[4]);
+  showWord(whours[5]); 
+  showWord(whours[6]);
+  showWord(whours[7]); 
+  showWord(whours[8]);
+  showWord(whours[9]); 
+  showWord(whours[10]);
+  showWord(whours[11]);
 }
 
-void showWord(uint8_t wordLeds[], int elementCount) {  
-    for(int i = 0; i < elementCount; i++) {
-      leds[wordLeds[i]] = CHSV( 0, 0, brightnessVal); 
-    }
-    FastLED.show();
+void showWord(uint8_t* wordLeds) {
+
+  uint8_t idx = * wordLeds;
+  
+  while (idx < TERM) {
+    Serial.print(idx, DEC);
+    Serial.print(", ");
+    leds[idx] = CHSV( 0, 0, brightnessVal); 
+    wordLeds++;
+    idx = * wordLeds;
+  }
+  Serial.println(idx);
+
+  FastLED.show();
 }
 
 void showDay(int day) {
@@ -566,12 +555,14 @@ void hueSensor() {
   Serial.println(brightnessVal);
 }
 
+/*
 int ledIndex(int col, int row) {
   if (row  % 2 == 0)
     return row * NUM_ROWS + col;
    else
      return row * NUM_ROWS + NUM_ROWS - 1 - col;
 }
+*/
 
 void printMonth(int month)
 {
