@@ -46,28 +46,30 @@ CRGB leds[NUM_LEDS];
 int setMode = SET_MODE_OFF;
 int brightnessVal = 37;  // Default hue
 
-uint8_t wmone[] = {66};
-uint8_t wmtwo[] = {66,65};
-uint8_t wmthree[] = {66,65,64};
-uint8_t wmfour[] = {66,65,64,67};
-uint8_t wmfive[] = {0,1,2,3};
-uint8_t wmten[] = {4,5,6,7};
-uint8_t wmfiveten[] = {0,1,2,3,4,5,6,7};
-uint8_t wto[] = {13,14,15};
-uint8_t wpast[] = {9,10,11,12};
-uint8_t whalf[] = {16,17,18,19};
-uint8_t whone[] = {28,29,30,31};
-uint8_t whtwo[] = {35,36,41,42};
-uint8_t whthree[] = {41,42,43,44};
-uint8_t whfour[] = {20,21,22,23};
-uint8_t whfive[] = {39,40,55,56};
-uint8_t whsix[] = {24,25,26,27,28};
-uint8_t whseven[] = {32,33,34,47,46,45};
-uint8_t wheight[] = {63,62,61,60};
-uint8_t whnine[] = {52,53,54,55};
-uint8_t whten[] = {49,50,51,52};
-uint8_t wheleven[] = {56,57,58};
-uint8_t whtwelve[] = {35,36,37,38,39};
+#define TERM 255
+
+uint8_t wmone[] = {66,TERM};
+uint8_t wmtwo[] = {66,65,TERM};
+uint8_t wmthree[] = {66,65,64,TERM};
+uint8_t wmfour[] = {66,65,64,67,TERM};
+uint8_t wmfive[] = {0,1,2,3,TERM};
+uint8_t wmten[] = {4,5,6,7,TERM};
+uint8_t wmfiveten[] = {0,1,2,3,4,5,6,7,TERM};
+uint8_t wto[] = {13,14,15,TERM};
+uint8_t wpast[] = {9,10,11,12,TERM};
+uint8_t whalf[] = {16,17,18,19,TERM};
+uint8_t whone[] = {28,29,30,31,TERM};
+uint8_t whtwo[] = {35,36,41,42,TERM};
+uint8_t whthree[] = {41,42,43,44,TERM};
+uint8_t whfour[] = {20,21,22,23,TERM};
+uint8_t whfive[] = {39,40,55,56,TERM};
+uint8_t whsix[] = {24,25,26,27,28,TERM};
+uint8_t whseven[] = {32,33,34,47,46,45,TERM};
+uint8_t wheight[] = {63,62,61,60,TERM};
+uint8_t whnine[] = {52,53,54,55,TERM};
+uint8_t whten[] = {49,50,51,52,TERM};
+uint8_t wheleven[] = {56,57,58,TERM};
+uint8_t whtwelve[] = {35,36,37,38,39,TERM};
 
 uint8_t* whours[] = {whone, whtwo, whthree, whfour, whfive, whsix, whseven, wheight, whnine, whten, wheleven, whtwelve};
 
