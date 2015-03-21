@@ -69,6 +69,8 @@ uint8_t whten[] = {49,50,51,52};
 uint8_t wheleven[] = {56,57,58};
 uint8_t whtwelve[] = {35,36,37,38,39};
 
+uint8_t* whours[] = {whone, whtwo, whthree, whfour, whfive, whsix, whseven, wheight, whnine, whten, wheleven, whtwelve};
+
 void setup() {
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
   
