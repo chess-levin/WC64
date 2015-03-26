@@ -23,13 +23,14 @@ CRGB leds[NUM_LEDS];
 
 #define SET_MODE_OFF 1
 #define SET_MODE_LEDTEST 2
-#define SET_MODE_DAY 4
-#define SET_MODE_MONTH 8
-#define SET_MODE_YEAR 16
-#define SET_MODE_HOURS 32
-#define SET_MODE_5MINUTES 64
-#define SET_MODE_1MINUTES 128
-#define SET_MODE_MAX 128
+#define SET_MODE_DAY 3
+#define SET_MODE_MONTH 4
+#define SET_MODE_YEAR 5
+#define SET_MODE_HOURS 6
+#define SET_MODE_5MINUTES 7
+#define SET_MODE_1MINUTES 8
+#define SET_MODE_MAX 8
+
 #define START_WITH_YEAR 2015
 
 #define MIN_BRIGHTNESS 25        // 16 is minimum
@@ -41,7 +42,7 @@ CRGB leds[NUM_LEDS];
 
 #define BRIGHNTNESS_SENSOR_PIN 2
 
-int setMode = SET_MODE_OFF;
+uint8_t setMode = SET_MODE_OFF;
 int brightnessVal = 37;  // Default hue
 
 #define TERM 255
@@ -212,7 +213,10 @@ void nextStep(struct ts *t) {
 
 void nextSetMode(struct ts *t) {
   confirmationLEDFlash();
-  setMode = setMode << 1;
+  setMode++;
+
+  Serial.print("Switching to setMode: ");
+  Serial.println(setMode);
   
   if (setMode == SET_MODE_HOURS) {
     t->hour=12;
@@ -223,7 +227,7 @@ void nextSetMode(struct ts *t) {
     t->hour=12;
     t->min=0;
     t->sec=0;
-    showAllWordsSeq();
+    testShowAllWordsSeq();
   } else if (setMode == SET_MODE_DAY) {
     t->mday;
     t->mon;
@@ -238,9 +242,6 @@ void nextSetMode(struct ts *t) {
   if (setMode > SET_MODE_MAX) {
     setMode = SET_MODE_OFF;
   }
-  
-  Serial.print("Switching to setMode: ");
-  Serial.println(setMode);
   
   if (setMode == SET_MODE_OFF) {
     Serial.print("Setting new Date & Time to: ");
@@ -306,61 +307,8 @@ void printRTCDataStruct(struct ts *t) {
       Serial.print("0");
     }
     Serial.println(t->sec);
-    
 }
 
-void wait4PushBtnState() {
-  int val = digitalRead(SET_BTN1_PIN);  // read input value
-  while (val == HIGH) {         // check if the input is HIGH (button released)
-    digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
-    val = digitalRead(SET_BTN1_PIN);  // read input value
-  }
-  digitalWrite(INTERNAL_LED_PIN, HIGH);  // turn LED ON
-  while(val == LOW) {
-    val = digitalRead(SET_BTN1_PIN);
-   }
-  delay(250);
-  digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
-}
-
-void showTestTimes() {
-  int h = 12;
-  showTestTime(h, 0);
-  showTestTime(h, 1);
-  showTestTime(h, 2);
-  showTestTime(h, 3);
-  showTestTime(h, 4);
-  showTestTime(h, 5);
-  showTestTime(h, 7);
-  showTestTime(h, 10);
-  showTestTime(h, 13);
-  showTestTime(h, 15);
-  showTestTime(h, 17);
-  showTestTime(h, 20);
-  showTestTime(h, 21);
-  showTestTime(h, 23);
-  showTestTime(h, 25);
-  showTestTime(h, 29);
-  showTestTime(h, 30);
-  showTestTime(h, 32);
-  showTestTime(h, 35);
-  showTestTime(h, 37);
-  showTestTime(h, 39);
-  showTestTime(h, 40);
-  showTestTime(h, 41);
-  showTestTime(h, 45);
-  showTestTime(h, 47);
-  showTestTime(h, 50);
-  showTestTime(h, 51);
-  showTestTime(h, 55);
-  showTestTime(h, 58);
-}
-
-void showTestTime(int hours, int minutes) {
-  showTime(hours, minutes);
-  wait4PushBtnState();
-}
-  
 void showTime(int hours, int minutes) {
   Serial.println();
   Serial.print(hours);
@@ -373,7 +321,9 @@ void showTime(int hours, int minutes) {
   showHours(hours + hcorrection);
 }
 
-int showMinutes(int minutes) {
+// If there are <= 20 minutes in a hour a correction value of 1 is returned
+// to be added to the hour
+uint8_t showMinutes(int minutes) {
   
   int tidx = -1; // 5, 10, 15
   int ridx = -1; // 1 nach , 2 vor 
@@ -479,7 +429,7 @@ void showHours(int hours) {
   showWord(whours[hours-1]);
 }
   
-void showAllWordsSeq() {
+void testShowAllWordsSeq() {
   showWord(wminutes[0]);
   showWord(wminutes[1]);
   showWord(wminutes[2]);
