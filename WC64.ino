@@ -18,7 +18,7 @@ CRGB leds[NUM_LEDS];
 // Arduino pin used for Data
 #define DATA_PIN 2
 
-#define BTN_MIN_PRESSTIME 95   //ms button to be pressed before action
+#define BTN_MIN_PRESSTIME 95   //doftware debouncing: ms button to be pressed before action
 #define TIMEOUT_SET_MODE 60000  //ms no button pressed
 
 #define SET_MODE_OFF 1
@@ -33,8 +33,8 @@ CRGB leds[NUM_LEDS];
 
 #define START_WITH_YEAR 2015
 
-#define MIN_BRIGHTNESS 25        // 16 is minimum
-#define MAX_BRIGHTNESS 122
+#define MIN_BRIGHTNESS 4 
+#define MAX_BRIGHTNESS 78
 
 #define IDLE_LOOP_TIME 5000
 
@@ -45,7 +45,6 @@ CRGB leds[NUM_LEDS];
 #define BRIGHNTNESS_SENSOR_PIN 2
 
 uint8_t setMode = SET_MODE_OFF;
-int brightnessVal = 37;  // Default hue
 
 #define TERM 255
 
@@ -113,11 +112,12 @@ void loop() {
     struct ts t;
     
     if (setMode == SET_MODE_OFF) {
-      hueSensor();
+      readBrightnessSensor();
       getRTCData(&t);
-      if (t.min != minLastDisplayed)
-      showTime(t.hour, t.min);
-      minLastDisplayed = t.min;
+      if (t.min != minLastDisplayed) {
+        showTime(t.hour, t.min);
+        minLastDisplayed = t.min;
+      }
     }
 
     idleLoop(&t);
@@ -130,7 +130,7 @@ void idleLoop(struct ts *t) {
     long lastPressedTime = 0;
     
     while (millis() - startTime < IDLE_LOOP_TIME) {
-      
+      FastLED.show();                        // https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
       int val1 = digitalRead(SET_BTN1_PIN);
       if (val1 == LOW) {      // Button pressed
        if (pressedTime1 == 0) {
@@ -139,8 +139,7 @@ void idleLoop(struct ts *t) {
        }
       } else {               // Button released
         if (pressedTime1 > 0) {
-          long duration = millis() - pressedTime1;
-          if (duration > BTN_MIN_PRESSTIME) {
+          if ((millis() - pressedTime1) > BTN_MIN_PRESSTIME) {
             nextSetMode(t);
           }
         }
@@ -155,8 +154,7 @@ void idleLoop(struct ts *t) {
        }
       } else {               // Button released
         if (pressedTime2 > 0) {
-          long duration = millis() - pressedTime2;
-          if (duration > BTN_MIN_PRESSTIME) {
+          if ((millis() - pressedTime2) > BTN_MIN_PRESSTIME) {
             nextStep(t);
           }
         }
@@ -198,7 +196,7 @@ void nextStep(struct ts *t) {
   } else   if (setMode == SET_MODE_1MINUTES) {
     Serial.println("Set next minute dot");
     t->min+=1;
-    if (t->min > 60) t->min = 0;
+    if (t->min > 59) t->min = 0;
     showTime(t->hour, t->min);
   } else if (setMode == SET_MODE_LEDTEST) {
     if ((t->min%5) == 0) {
@@ -227,6 +225,12 @@ void nextSetMode(struct ts *t) {
     t->min=0;
     t->sec=0;
     showTime(t->hour, t->min);
+  } else if (setMode == SET_MODE_5MINUTES) {
+    t->min=5;
+    showTime(t->hour, t->min);
+  } else   if (setMode == SET_MODE_1MINUTES) {
+    t->min++;
+    showTime(t->hour, t->min);    
   } else if (setMode == SET_MODE_LEDTEST) {
     t->hour=12;
     t->min=0;
@@ -260,7 +264,7 @@ void nextSetMode(struct ts *t) {
 
 void confirmationLEDFlash() {
   digitalWrite(INTERNAL_LED_PIN, LOW);
-  delay (200);
+  FastLED.delay(200);
   digitalWrite(INTERNAL_LED_PIN, HIGH);
 }
 
@@ -274,7 +278,6 @@ void resetSetMode() {
 
 void getRTCData(struct ts *t) {
     float temperature;
-    char tempF[6];
     char buff[BUFF_MAX];
    
     DS3231_get(t); //Get time
@@ -283,42 +286,11 @@ void getRTCData(struct ts *t) {
     
     parse_cmd("C",1);
     temperature = DS3231_get_treg(); //Get temperature
-    dtostrf(temperature, 5, 1, tempF);
-
-    Serial.print(' ');
-    Serial.print(tempF);
-    Serial.print((char)223);
-    Serial.println("C ");
-}
-
-void printRTCDataStruct(struct ts *t) {
-    Serial.print(t->mday);
-    
-    printMonth(t->mon);
-    
-    Serial.print(t->year);
-    Serial.print(", ");   
-    Serial.print(t->hour);
-    Serial.print(":");
-    if(t->min<10)
-    {
-      Serial.print("0");
-    }
-    Serial.print(t->min);
-    Serial.print(":");
-    if(t->sec<10)
-    {
-      Serial.print("0");
-    }
-    Serial.println(t->sec);
+    printTemp(temperature);
 }
 
 void showTime(int hours, int minutes) {
-  Serial.println();
-  Serial.print(hours);
-  Serial.print(":");
-  Serial.println(minutes);
-
+  printTime(hours, minutes, 99);
   FastLED.clear();
   int hcorrection = showMinutes(minutes);
   showHours(hours + hcorrection);
@@ -434,7 +406,7 @@ void showHours(int hours) {
 }
   
 void testShowAllWordsSeq() {
-  FastLED.show();  
+  FastLED.clear();  
   showWord(wminutes[0]);
   showWord(wminutes[1]);
   showWord(wminutes[2]);
@@ -465,14 +437,10 @@ void showWord(uint8_t* wordLeds) {
   uint8_t idx = * wordLeds;
   
   while (idx < TERM) {
-    Serial.print(idx, DEC);
-    Serial.print(", ");
-    leds[idx] = CHSV( 0, 0, brightnessVal); 
+    leds[idx] = CRGB( 255, 255, 255); 
     wordLeds++;
     idx = * wordLeds;
   }
-  Serial.println(idx);
-
 }
 
 void showDay(int day) {
@@ -499,9 +467,9 @@ void showYear(int year) {
   FastLED.show();
 }
 
-void hueSensor() {
-  int val = analogRead(BRIGHNTNESS_SENSOR_PIN);    // read the value from the sensor
-  brightnessVal = map(val, 0, 1023, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+void readBrightnessSensor() {
+  int brightnessVal = map(analogRead(BRIGHNTNESS_SENSOR_PIN), 0, 1023, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+  FastLED.setBrightness( brightnessVal );
   Serial.print("Brightness [");
   Serial.print(MIN_BRIGHTNESS);
   Serial.print(", ");
@@ -519,9 +487,43 @@ int ledIndex(int col, int row) {
 }
 */
 
-void printMonth(int month)
+void printRTCDataStruct(struct ts *t) {
+    printDate(t);
+    printTime(t->hour, t->min, t->sec);
+}
+
+void printTime(int hours, int minutes, int sec) {
+    Serial.print(hours);
+    Serial.print(":");
+    if(minutes<10)
+    {
+      Serial.print("0");
+    }
+    Serial.print(minutes);
+    Serial.print(":");
+    if(sec<10)
+    {
+      Serial.print("0");
+    }
+    Serial.println(sec);
+}
+
+void printTemp(float temperature) {
+    char tempF[6];
+    dtostrf(temperature, 5, 1, tempF);
+
+    Serial.print(' ');
+    Serial.print(tempF);
+    Serial.print((char)167);
+    Serial.println("C ");
+
+}
+
+void printDate(struct ts *t)
 {
-  switch(month)
+  Serial.print(t->mday);
+
+  switch(t->mon)
   {
     case 1: Serial.print(" January ");break;
     case 2: Serial.print(" February ");break;
@@ -536,7 +538,10 @@ void printMonth(int month)
     case 11: Serial.print(" November ");break;
     case 12: Serial.print(" December ");break;
     default: Serial.print(" Error ");break;
-  } 
+  }
+     
+   Serial.print(t->year);
+   Serial.print(", ");
 }
 
 void parse_cmd(char *cmd, int cmdsize)
