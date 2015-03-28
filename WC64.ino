@@ -36,6 +36,8 @@ CRGB leds[NUM_LEDS];
 #define MIN_BRIGHTNESS 25        // 16 is minimum
 #define MAX_BRIGHTNESS 122
 
+#define IDLE_LOOP_TIME 5000
+
 #define SET_BTN1_PIN 7
 #define SET_BTN2_PIN 6
 #define INTERNAL_LED_PIN 13
@@ -86,6 +88,8 @@ uint8_t whalf[] = {16,17,18,19,TERM};
 
 uint8_t* wtime[] = {wto, wpast, whalf};
 
+uint8_t minLastDisplayed = 0;
+
 void setup() {
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
   
@@ -111,12 +115,12 @@ void loop() {
     if (setMode == SET_MODE_OFF) {
       hueSensor();
       getRTCData(&t);
+      if (t.min != minLastDisplayed)
       showTime(t.hour, t.min);
+      minLastDisplayed = t.min;
     }
 
     idleLoop(&t);
-    
-    //showTestTimes();
 }
 
 void idleLoop(struct ts *t) {
@@ -125,7 +129,7 @@ void idleLoop(struct ts *t) {
     long pressedTime2 = 0;
     long lastPressedTime = 0;
     
-    while (millis() - startTime < 10000) {
+    while (millis() - startTime < IDLE_LOOP_TIME) {
       
       int val1 = digitalRead(SET_BTN1_PIN);
       if (val1 == LOW) {      // Button pressed
@@ -316,9 +320,9 @@ void showTime(int hours, int minutes) {
   Serial.println(minutes);
 
   FastLED.clear();
-  
   int hcorrection = showMinutes(minutes);
   showHours(hours + hcorrection);
+  FastLED.show();
 }
 
 // If there are <= 20 minutes in a hour a correction value of 1 is returned
@@ -430,6 +434,7 @@ void showHours(int hours) {
 }
   
 void testShowAllWordsSeq() {
+  FastLED.show();  
   showWord(wminutes[0]);
   showWord(wminutes[1]);
   showWord(wminutes[2]);
@@ -452,6 +457,7 @@ void testShowAllWordsSeq() {
   showWord(whours[9]); 
   showWord(whours[10]);
   showWord(whours[11]);
+  FastLED.show();  
 }
 
 void showWord(uint8_t* wordLeds) {
@@ -467,7 +473,6 @@ void showWord(uint8_t* wordLeds) {
   }
   Serial.println(idx);
 
-  FastLED.show();
 }
 
 void showDay(int day) {
