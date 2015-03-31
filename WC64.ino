@@ -19,7 +19,7 @@ CRGB leds[NUM_LEDS];
 #define DATA_PIN 4
 
 #define BTN_MIN_PRESSTIME 95   //doftware debouncing: ms button to be pressed before action
-#define TIMEOUT_SET_MODE 60000  //ms no button pressed
+#define TIMEOUT_SET_MODE 30000  //ms no button pressed
 
 #define SET_MODE_OFF 0
 #define SET_MODE_LEDTEST 1
@@ -29,8 +29,9 @@ CRGB leds[NUM_LEDS];
 #define SET_MODE_HOURS 5
 #define SET_MODE_5MINUTES 6
 #define SET_MODE_1MINUTES 7
-#define SET_MODE_SET 8
-#define SET_MODE_MAX 8
+#define SET_MODE_MAX 7
+
+volatile uint8_t setModeState = SET_MODE_OFF;
 
 #define START_WITH_YEAR 2015
 
@@ -39,13 +40,14 @@ CRGB leds[NUM_LEDS];
 
 #define IDLE_LOOP_TIME 5000
 
-#define SET_BTN1_PIN 0      // set mode button; Interrupt 0 is on DIGITAL PIN 2!
-#define SET_BTN2_PIN 1      // set value button; Interrupt 1 is on DIGITAL PIN 3!
+#define SET_BTN1_PIN 2      // set mode button; Interrupt 0 is on DIGITAL PIN 2!
+#define SET_BTN2_PIN 3      // set value button; Interrupt 1 is on DIGITAL PIN 3!
+#define SET_BTN1_IRQ 0      // set mode button; Interrupt 0 is on DIGITAL PIN 2!
+#define SET_BTN2_IRQ 1      // set value button; Interrupt 1 is on DIGITAL PIN 3!
+
 #define INTERNAL_LED_PIN 13
 
 #define BRIGHNTNESS_SENSOR_PIN 2
-
-uint8_t setModeState = SET_MODE_OFF;
 
 #define TERM 255
 
@@ -90,8 +92,7 @@ uint8_t* wtime[] = {wto, wpast, whalf};
 
 uint8_t minLastDisplayed = 0;
 
-volatile boolean doSet = false;
-volatile long lastPressedTime = 0;
+long lastPressedTime = 0;
 struct ts t;
 
 void setup() {
@@ -100,14 +101,12 @@ void setup() {
   pinMode(INTERNAL_LED_PIN, OUTPUT);
   digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
   
-  attachInterrupt(SET_BTN1_PIN, setMode, RISING);
-  attachInterrupt(SET_BTN2_PIN, setValue, RISING);
-
-/*  
+  attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
+//  attachInterrupt(SET_BTN2_IRQ, setValue, RISING);
+ 
+  pinMode(SET_BTN1_PIN, INPUT);     
   pinMode(SET_BTN2_PIN, INPUT);
-  digitalWrite(SET_BTN2_PIN, HIGH); // connect internal pull-up
-  pinMode(SET_BTN1_PIN, INPUT);     // uses external pull-up
-*/
+
   Serial.begin(9600);  
   Wire.begin(); // init Wire Library
   DS3231_init(DS3231_INTCN);
@@ -121,20 +120,6 @@ void setup() {
 void loop() {
     FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
     
-    if (setModeState != SET_MODE_OFF) {
-      if (setModeState == SET_MODE_SET) {
-        Serial.println("doSet ");
-        printRTCDataStruct(&t);
-        DS3231_set(t);
-        resetModeState();
-        lastPressedTime = 0;
-      } else if (millis() - lastPressedTime > TIMEOUT_SET_MODE) {
-        resetModeState();
-        lastPressedTime = 0;
-      }
-    }
-    
-
     if (setModeState == SET_MODE_OFF) {
       readBrightnessSensor();
       getRTCData(&t);
@@ -142,26 +127,41 @@ void loop() {
         showTime(t.hour, t.min);
         minLastDisplayed = t.min;
       }
+      delay(5000);
+    } else {
+      queryButtonLoop();
     }
-   
-    Serial.print("setModeState = ");
-    Serial.println(setModeState);
-
-    delay(5000);
-    //idleLoop(&t);
 }
 
-void setMode() {
+void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)()) {
+      if (digitalRead(btnPin) == LOW) {
+      *pressed |= mask;
+    } else if ((*pressed & mask) == mask) {
+      lastPressedTime = millis();
+      action();
+      *pressed &= ~mask;
+    }
+}
+
+void queryButtonLoop() {
+  byte pressed = 0b00000000;
   lastPressedTime = millis();
+  
+  while ((millis() - lastPressedTime < TIMEOUT_SET_MODE)){
+    checkButton(0b000001, &pressed, SET_BTN1_PIN, &nextSetMode);
+    checkButton(0b000010, &pressed, SET_BTN2_PIN, &nextStep);
+  }
+  Serial.println("timeout");
+  resetModeState();
+}
+
+void initSetMode() {
+  detachInterrupt(SET_BTN1_IRQ);
+  Serial.println("initSetMode ");
+
   nextSetMode();
 }
-  
 
-void setValue() {
-  lastPressedTime = millis();
-  nextStep();
-}
- 
 void nextStep() {
   if (setModeState == SET_MODE_DAY) {
     Serial.println("Set next day");
@@ -211,8 +211,8 @@ void nextStep() {
 void nextSetMode() {
   setModeState++;
 
-//  Serial.print("Switching to setModeState: ");
-//  Serial.println(setModeState);
+  Serial.print("Switching to setModeState: ");
+  Serial.println(setModeState);
   
   if (setModeState == SET_MODE_HOURS) {
     t.hour=12;
@@ -241,19 +241,21 @@ void nextSetMode() {
     showYear(t.year);
   }
 
-  if (setModeState >= SET_MODE_MAX) {
-    setModeState = SET_MODE_MAX;
-    //Serial.println("Setting new Date & Time to: ");
-    //printRTCDataStruct(&t);
-    //DS3231_set(t);
+  if (setModeState > SET_MODE_MAX) {
+    Serial.println("Setting new Date & Time to: ");
+    printRTCDataStruct(&t);
+    DS3231_set(t);
+    setModeState = SET_MODE_OFF;
+    delay(1000);
+    attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
   }
 }
-
 
 void resetModeState() {
   if (setModeState != SET_MODE_OFF) {
     setModeState = SET_MODE_OFF;
     Serial.println("Resetting setModeState after timeout pressing no button. Fallback to old Time & Date.");
+    attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
   }
 }
 
