@@ -18,8 +18,12 @@ CRGB leds[NUM_LEDS];
 // Arduino pin used for Data
 #define DATA_PIN 4
 
+// Colors for display in different set modes and normal time mode
 #define COLOR_NORMAL_DISPLAY CRGB( 255, 255, 255)
 #define COLOR_SET_DISPLAY CRGB( 255, 136, 0)
+#define COLOR_SET_DAY CRGB( 255, 0, 0); 
+#define COLOR_SET_MONTH CRGB( 0, 255, 0); 
+#define COLOR_SET_YEAR CRGB( 0, 0, 255); 
 
 #define BTN_MIN_PRESSTIME 95    //doftware debouncing: ms button to be pressed before action
 #define TIMEOUT_SET_MODE 30000  //ms no button pressed
@@ -271,10 +275,6 @@ void getRTCData(struct ts *t) {
     DS3231_get(t); //Get time
 
     printRTCDataStruct(t);
-    
-    parse_cmd("C",1);
-    temperature = DS3231_get_treg(); //Get temperature
-    printTemp(temperature);
 }
 
 void showTime(int hours, int minutes) {
@@ -438,7 +438,7 @@ void showWord(uint8_t* wordLeds) {
 void showDay(int day) {
   FastLED.clear();
   for(byte i = 0; i < day; i++) {
-    leds[i] = CRGB( 255, 0, 0); 
+    leds[i] = COLOR_SET_DAY; 
   }
   FastLED.show();
 }
@@ -446,7 +446,7 @@ void showDay(int day) {
 void showMonth(int month) {
   FastLED.clear();
   for(byte i = 0; i < month; i++) {
-    leds[i] = CRGB( 0, 255, 0); 
+    leds[i] = COLOR_SET_MONTH; 
   }
   FastLED.show();
 }
@@ -454,20 +454,18 @@ void showMonth(int month) {
 void showYear(int year) {
   FastLED.clear();
   for(byte i = 0; i < year-2000; i++) {
-    leds[i] = CRGB( 0, 0, 255); 
+    leds[i] = COLOR_SET_YEAR; 
   }
   FastLED.show();
 }
 
 void readBrightnessSensor() {
+  char buffer [28];
   int brightnessVal = map(analogRead(BRIGHNTNESS_SENSOR_PIN), 0, 1023, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
   FastLED.setBrightness( brightnessVal );
-  Serial.print("Brightness [");
-  Serial.print(MIN_BRIGHTNESS);
-  Serial.print(", ");
-  Serial.print(MAX_BRIGHTNESS);
-  Serial.print("] = ");
-  Serial.println(brightnessVal);
+
+  sprintf(buffer, "Brightness [%d,%d] = %d", MIN_BRIGHTNESS, MAX_BRIGHTNESS, brightnessVal);
+  Serial.println(buffer);
 }
 
 /*
@@ -485,130 +483,17 @@ void printRTCDataStruct(struct ts *t) {
 }
 
 void printTime(int hours, int minutes, int sec) {
-    Serial.print(hours);
-    Serial.print(":");
-    if(minutes<10)
-    {
-      Serial.print("0");
-    }
-    Serial.print(minutes);
-    Serial.print(":");
-    if(sec<10)
-    {
-      Serial.print("0");
-    }
-    Serial.println(sec);
-}
-
-void printTemp(float temperature) {
-    char tempF[6];
-    dtostrf(temperature, 5, 1, tempF);
-
-    Serial.print(' ');
-    Serial.print(tempF);
-    Serial.print((char)167);
-    Serial.println("C ");
-
+    char buffer [10];
+    
+    sprintf(buffer, "%02d:%02d:%02d", hours, minutes, sec);
+    Serial.println(buffer);
 }
 
 void printDate(struct ts *t)
 {
-  Serial.print(t->mday);
-
-  switch(t->mon)
-  {
-    case 1: Serial.print(" January ");break;
-    case 2: Serial.print(" February ");break;
-    case 3: Serial.print(" March ");break;
-    case 4: Serial.print(" April ");break;
-    case 5: Serial.print(" May ");break;
-    case 6: Serial.print(" June ");break;
-    case 7: Serial.print(" July ");break;
-    case 8: Serial.print(" August ");break;
-    case 9: Serial.print(" September ");break;
-    case 10: Serial.print(" October ");break;
-    case 11: Serial.print(" November ");break;
-    case 12: Serial.print(" December ");break;
-    default: Serial.print(" Error ");break;
-  }
-     
-   Serial.print(t->year);
-   Serial.print(", ");
-}
-
-void parse_cmd(char *cmd, int cmdsize)
-{
-    uint8_t i;
-    uint8_t reg_val;
-    char buff[BUFF_MAX];
-    struct ts t;
-
-    //snprintf(buff, BUFF_MAX, "cmd was '%s' %d\n", cmd, cmdsize);
-    //Serial.print(buff);
-
-    // TssmmhhWDDMMYYYY aka set time
-    if (cmd[0] == 84 && cmdsize == 16) {
-        //T355720619112011
-        t.sec = inp2toi(cmd, 1);
-        t.min = inp2toi(cmd, 3);
-        t.hour = inp2toi(cmd, 5);
-        t.wday = inp2toi(cmd, 7);
-        t.mday = inp2toi(cmd, 8);
-        t.mon = inp2toi(cmd, 10);
-        t.year = inp2toi(cmd, 12) * 100 + inp2toi(cmd, 14);
-        DS3231_set(t);
-        Serial.println("OK");
-    } else if (cmd[0] == 49 && cmdsize == 1) {  // "1" get alarm 1
-        DS3231_get_a1(&buff[0], 59);
-        Serial.println(buff);
-    } else if (cmd[0] == 50 && cmdsize == 1) {  // "2" get alarm 1
-        DS3231_get_a2(&buff[0], 59);
-        Serial.println(buff);
-    } else if (cmd[0] == 51 && cmdsize == 1) {  // "3" get aging register
-        Serial.print("aging reg is ");
-        Serial.println(DS3231_get_aging(), DEC);
-    } else if (cmd[0] == 65 && cmdsize == 9) {  // "A" set alarm 1
-        DS3231_set_creg(DS3231_INTCN | DS3231_A1IE);
-        //ASSMMHHDD
-        for (i = 0; i < 4; i++) {
-            time[i] = (cmd[2 * i + 1] - 48) * 10 + cmd[2 * i + 2] - 48; // ss, mm, hh, dd
-        }
-        boolean flags[5] = { 0, 0, 0, 0, 0 };
-        DS3231_set_a1(time[0], time[1], time[2], time[3], flags);
-        DS3231_get_a1(&buff[0], 59);
-        Serial.println(buff);
-    } else if (cmd[0] == 66 && cmdsize == 7) {  // "B" Set Alarm 2
-        DS3231_set_creg(DS3231_INTCN | DS3231_A2IE);
-        //BMMHHDD
-        for (i = 0; i < 4; i++) {
-            time[i] = (cmd[2 * i + 1] - 48) * 10 + cmd[2 * i + 2] - 48; // mm, hh, dd
-        }
-        boolean flags[5] = { 0, 0, 0, 0 };
-        DS3231_set_a2(time[0], time[1], time[2], flags);
-        DS3231_get_a2(&buff[0], 59);
-        Serial.println(buff);
-    } else if (cmd[0] == 67 && cmdsize == 1) {  // "C" - get temperature register
-        //Serial.print("temperature reg is ");
-        //Serial.println(DS3231_get_treg(), DEC);
-    } else if (cmd[0] == 68 && cmdsize == 1) {  // "D" - reset status register alarm flags
-        reg_val = DS3231_get_sreg();
-        reg_val &= B11111100;
-        DS3231_set_sreg(reg_val);
-    } else if (cmd[0] == 70 && cmdsize == 1) {  // "F" - custom fct
-        reg_val = DS3231_get_addr(0x5);
-        Serial.print("orig ");
-        Serial.print(reg_val,DEC);
-        Serial.print("month is ");
-        Serial.println(bcdtodec(reg_val & 0x1F),DEC);
-    } else if (cmd[0] == 71 && cmdsize == 1) {  // "G" - set aging status register
-        DS3231_set_aging(0);
-    } else if (cmd[0] == 83 && cmdsize == 1) {  // "S" - get status register
-        Serial.print("status reg is ");
-        Serial.println(DS3231_get_sreg(), DEC);
-    } else {
-        Serial.print("unknown command prefix ");
-        Serial.println(cmd[0]);
-        Serial.println(cmd[0], DEC);
-    }
+   char buffer [12];
+    
+   sprintf(buffer, "%02d.%02d.%04d, ", t->mday, t->mon, t->year);
+   Serial.print(buffer);
 }
 
