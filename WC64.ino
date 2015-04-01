@@ -18,9 +18,10 @@ CRGB leds[NUM_LEDS];
 // Arduino pin used for Data
 #define DATA_PIN 4
 
-#define BTN_MIN_PRESSTIME 95   //doftware debouncing: ms button to be pressed before action
+#define BTN_MIN_PRESSTIME 95    //doftware debouncing: ms button to be pressed before action
 #define TIMEOUT_SET_MODE 30000  //ms no button pressed
 
+#define SET_MODE_DUMMY -1
 #define SET_MODE_OFF 0
 #define SET_MODE_LEDTEST 1
 #define SET_MODE_YEAR 2
@@ -31,14 +32,12 @@ CRGB leds[NUM_LEDS];
 #define SET_MODE_1MINUTES 7
 #define SET_MODE_MAX 7
 
-volatile uint8_t setModeState = SET_MODE_OFF;
+volatile int setModeState = SET_MODE_OFF;
 
-#define START_WITH_YEAR 2015
+#define START_WITH_YEAR 2015  // start year setting with
 
 #define MIN_BRIGHTNESS 4 
 #define MAX_BRIGHTNESS 70
-
-#define IDLE_LOOP_TIME 5000
 
 #define SET_BTN1_PIN 2      // set mode button; Interrupt 0 is on DIGITAL PIN 2!
 #define SET_BTN2_PIN 3      // set value button; Interrupt 1 is on DIGITAL PIN 3!
@@ -127,10 +126,14 @@ void loop() {
         showTime(t.hour, t.min);
         minLastDisplayed = t.min;
       }
-      delay(5000);
+      delay(2000);
     } else {
       queryButtonLoop();
     }
+    
+    Serial.print("setModeState in main loop: ");
+    Serial.println(setModeState);
+
 }
 
 void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)()) {
@@ -147,12 +150,15 @@ void queryButtonLoop() {
   byte pressed = 0b00000000;
   lastPressedTime = millis();
   
-  while ((millis() - lastPressedTime < TIMEOUT_SET_MODE)){
+  while ((millis() - lastPressedTime < TIMEOUT_SET_MODE) && (setModeState > SET_MODE_OFF)){
     checkButton(0b000001, &pressed, SET_BTN1_PIN, &nextSetMode);
     checkButton(0b000010, &pressed, SET_BTN2_PIN, &nextStep);
   }
-  Serial.println("timeout");
-  resetModeState();
+  
+  if (setModeState > SET_MODE_OFF) {
+    Serial.println("timeout");
+    resetModeState();
+  }
 }
 
 void initSetMode() {
@@ -222,7 +228,7 @@ void nextSetMode() {
   } else if (setModeState == SET_MODE_5MINUTES) {
     t.min=5;
     showTime(t.hour, t.min);
-  } else   if (setModeState == SET_MODE_1MINUTES) {
+  } else if (setModeState == SET_MODE_1MINUTES) {
     t.min++;
     showTime(t.hour, t.min);    
   } else if (setModeState == SET_MODE_LEDTEST) {
@@ -242,11 +248,10 @@ void nextSetMode() {
   }
 
   if (setModeState > SET_MODE_MAX) {
-    Serial.println("Setting new Date & Time to: ");
+    Serial.println("===> Setting new Date & Time to: ");
     printRTCDataStruct(&t);
     DS3231_set(t);
-    setModeState = SET_MODE_OFF;
-    delay(1000);
+    setModeState = SET_MODE_DUMMY;
     attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
   }
 }
