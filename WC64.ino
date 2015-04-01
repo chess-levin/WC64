@@ -18,6 +18,9 @@ CRGB leds[NUM_LEDS];
 // Arduino pin used for Data
 #define DATA_PIN 4
 
+#define COLOR_NORMAL_DISPLAY CRGB( 255, 255, 255)
+#define COLOR_SET_DISPLAY CRGB( 255, 136, 0)
+
 #define BTN_MIN_PRESSTIME 95    //doftware debouncing: ms button to be pressed before action
 #define TIMEOUT_SET_MODE 30000  //ms no button pressed
 
@@ -37,7 +40,7 @@ volatile int setModeState = SET_MODE_OFF;
 #define START_WITH_YEAR 2015  // start year setting with
 
 #define MIN_BRIGHTNESS 4 
-#define MAX_BRIGHTNESS 70
+#define MAX_BRIGHTNESS 65
 
 #define SET_BTN1_PIN 2      // set mode button; Interrupt 0 is on DIGITAL PIN 2!
 #define SET_BTN2_PIN 3      // set value button; Interrupt 1 is on DIGITAL PIN 3!
@@ -197,7 +200,7 @@ void nextStep() {
   } else   if (setModeState == SET_MODE_1MINUTES) {
     Serial.println("Set next minute dot");
     t.min+=1;
-    if (t.min > 59) t.min = 0;
+    if (t.min %5 == 0) t.min -= 5;
     showTime(t.hour, t.min);
   } else if (setModeState == SET_MODE_LEDTEST) {
     if ((t.min%5) == 0) {
@@ -232,9 +235,6 @@ void nextSetMode() {
     t.min++;
     showTime(t.hour, t.min);    
   } else if (setModeState == SET_MODE_LEDTEST) {
-    t.hour=12;
-    t.min=0;
-    t.sec=0;
     testShowAllWordsSeq();
   } else if (setModeState == SET_MODE_DAY) {
     showDay(t.mday);
@@ -425,7 +425,11 @@ void showWord(uint8_t* wordLeds) {
   uint8_t idx = * wordLeds;
   
   while (idx < TERM) {
-    leds[idx] = CRGB( 255, 255, 255); 
+    if (setModeState <= SET_MODE_OFF) {
+      leds[idx] = COLOR_NORMAL_DISPLAY; 
+    } else {
+      leds[idx] = COLOR_SET_DISPLAY; 
+    }
     wordLeds++;
     idx = * wordLeds;
   }
