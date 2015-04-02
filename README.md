@@ -11,7 +11,7 @@ Techically it is based upon an 8x8 LED Matrix (WS2812B LEDs e.g. www.diamex.de),
 
 ![Image of wordclock](https://github.com/chess-levin/WC64/blob/master/docs/img/wc64_parts.jpg)
 
-The challenge was to find a way to put [the mask](https://github.com/chess-levin/WC64/blob/master/docs/mask_final_dt.pdf) with the letters on the acrylic. For a transparency made by a cutting plotter the letters are to schmall. So I decided to have the mask printed on the transperency. The result was that the black parts were to translucent. To achieve a high contrast between the dark parts and the lighten letters I glued two transparencies together. One of the two transparencies has a self-adhesive side which this is glued to the acrylic.
+The challenge was to find a way to get [the mask](https://github.com/chess-levin/WC64/blob/master/docs/mask_final_dt.pdf) with the letters on the acrylic. For a transparency made by a cutting plotter the letters are to schmall. So I decided to have the mask printed on a transperency. The result was that the black parts were to translucent. To achieve a high contrast between the dark parts and the lighten letters I glued two transparencies together. One of the two transparencies has a self-adhesive side which this is glued to the acrylic.
 
 I found several ideas browsing the net for other wordclock projects. One was the [formatc1702](https://github.com/formatc1702) project of Daniel Rojas. He gave me the idea how to put all words into an 8x8 matrix. Thank you guys - keep on  wordclocking!
 
