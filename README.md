@@ -3,7 +3,7 @@
 
 ![Image of wordclock](https://github.com/chess-levin/WC64/blob/master/docs/img/wc64_front.jpg)
 
-This is my version of a wordclock. I was trying out the arduino platform and this made so much fun, so I decided to build my own wordclock. The dimensions of my wordclock are approx. 11x11x3 cm. The front panel is hold by four strong neodym magnets. You can unclip it and turn it by 90 degress. This allows you to change the posing variant: You can hang the clock on the wall or set it on a shelf. The clock detects the environment brightness and adapts the brightness of the display to it.
+This is my version of a wordclock. I was trying out the arduino platform and this made so much fun, so I decided to build my own wordclock. The dimensions of my wordclock are approx. 11x11x3 cm. The front panel is hold by four strong neodym magnets. You can unclip it and turn it by 90 degress. This allows you to change the posing variant: You can hang the clock on the wall or set it on a shelf. The clock detects the environment brightness and adapts the brightness of the display to it. You can see a [video of the clock on youtube](https://www.youtube.com/watch?v=TP77dVIzgcs).
 
 ### Electronics
 
