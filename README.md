@@ -1,5 +1,5 @@
 # WC64
-## Yet another wordclock project
+### Yet another wordclock project
 
 ![Image of wordclock](https://github.com/chess-levin/WC64/blob/master/docs/img/wc64_front.jpg)
 
