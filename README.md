@@ -7,7 +7,7 @@ This is my version of a wordclock. I was trying out the arduino platform and thi
 
 ### Electronics
 
-Techically it is based upon an [8x8 LED Matrix (WS2812B LEDs)](https://github.com/chess-levin/WC64/blob/master/docs/img/wc64_matrix.jpg), a real time clock (RTC DS3231 AT24C32 Memory Real Time Clock IIC Modul für Arduino PIC CP14003 B36) and an arduino nano board. In order to set time and date there are two push buttons inside the case. The case is made of wood. The display is a multilayer stack of acralic glass, transparancy film, LED matrix and hard foam board. There are some more images, a video and a circuit diagram in the docs folder.
+Techically it is based upon an [8x8 LED Matrix (WS2812B LEDs)](https://github.com/chess-levin/WC64/blob/master/docs/img/wc64_matrix.jpg), a real time clock (RTC DS3231 AT24C32 Memory Real Time Clock IIC Modul für Arduino PIC CP14003 B36) and an arduino nano board. In order to set time and date there are two push buttons inside the case. The case is made of wood. The display is a multilayer stack of acralic glass, transparancy film, LED matrix and hard foam board. There are some more images, a video and a [circuit diagram](https://github.com/chess-levin/WC64/blob/master/docs/img/WC64_circuit.png) in the docs folder.
 
 ### Structure
 
