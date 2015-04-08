@@ -302,8 +302,8 @@ void showTime(int hours, int minutes) {
 uint8_t showMinutes(int minutes) {
   
   int tidx = -1; // 5, 10, 15
-  int ridx = -1; // 1 nach , 2 vor 
-  int qidx = -1; // 1 halb
+  int ridx = -1; // 1 past , 2 to 
+  int qidx = -1; // 1 half
   int showMinutes = minutes;
   
   if (minutes == 0) {
