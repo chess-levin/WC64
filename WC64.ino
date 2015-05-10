@@ -10,6 +10,8 @@
 
 *****************************************************************************************************************/
 
+#include <avr/io.h>
+#include <avr/pgmspace.h>
 #include <config.h>
 #include <ds3231.h>
 #include <Wire.h>
@@ -69,44 +71,44 @@ volatile int setModeState = SET_MODE_OFF;
 
 #define TERM 255
 
-uint8_t whone[] = {28,29,30,31,TERM};
-uint8_t whtwo[] = {35,36,41,42,TERM};
-uint8_t whthree[] = {41,42,43,44,TERM};
-uint8_t whfour[] = {20,21,22,23,TERM};
-uint8_t whfive[] = {39,40,55,56,TERM};
-uint8_t whsix[] = {24,25,26,27,28,TERM};
-uint8_t whseven[] = {32,33,34,47,46,45,TERM};
-uint8_t wheight[] = {63,62,61,60,TERM};
-uint8_t whnine[] = {52,53,54,55,TERM};
-uint8_t whten[] = {49,50,51,52,TERM};
-uint8_t wheleven[] = {56,57,58,TERM};
-uint8_t whtwelve[] = {35,36,37,38,39,TERM};
+const byte whone[] PROGMEM = {28,29,30,31,TERM};
+const byte whtwo[] PROGMEM = {35,36,41,42,TERM};
+const byte whthree[] PROGMEM = {41,42,43,44,TERM};
+const byte whfour[] PROGMEM = {20,21,22,23,TERM};
+const byte whfive[] PROGMEM = {39,40,55,56,TERM};
+const byte whsix[] PROGMEM = {24,25,26,27,28,TERM};
+const byte whseven[] PROGMEM = {32,33,34,47,46,45,TERM};
+const byte wheight[] PROGMEM = {63,62,61,60,TERM};
+const byte whnine[] PROGMEM = {52,53,54,55,TERM};
+const byte whten[] PROGMEM = {49,50,51,52,TERM};
+const byte wheleven[] PROGMEM = {56,57,58,TERM};
+const byte whtwelve[] PROGMEM = {35,36,37,38,39,TERM};
 
-uint8_t* whours[] = {whone, whtwo, whthree, whfour, whfive, whsix, whseven, wheight, whnine, whten, wheleven, whtwelve};
+const byte* const whours[] PROGMEM = {whone, whtwo, whthree, whfour, whfive, whsix, whseven, wheight, whnine, whten, wheleven, whtwelve};
 
-uint8_t wmone[] = {66,TERM};
-uint8_t wmtwo[] = {66,65,TERM};
-uint8_t wmthree[] = {66,65,64,TERM};
-uint8_t wmfour[] = {66,65,64,67,TERM};
-uint8_t wmfive[] = {0,1,2,3,TERM};
-uint8_t wmten[] = {4,5,6,7,TERM};
-uint8_t wmfiveten[] = {0,1,2,3,4,5,6,7,TERM};
+const byte wmone[] = {66,TERM};
+const byte wmtwo[] = {66,65,TERM};
+const byte wmthree[] = {66,65,64,TERM};
+const byte wmfour[] = {66,65,64,67,TERM};
+const byte wmfive[] = {0,1,2,3,TERM};
+const byte wmten[] = {4,5,6,7,TERM};
+const byte wmfiveten[] = {0,1,2,3,4,5,6,7,TERM};
 
 #define mfive_idx 4
 #define mten_idx 5
 #define mfiveten_idx 6
 
-uint8_t* wminutes[] = {wmone, wmtwo, wmthree, wmfour, wmfive, wmten, wmfiveten};
+const byte* const wminutes[] PROGMEM = {wmone, wmtwo, wmthree, wmfour, wmfive, wmten, wmfiveten};
 
-uint8_t wto[] = {13,14,15,TERM};
-uint8_t wpast[] = {9,10,11,12,TERM};
-uint8_t whalf[] = {16,17,18,19,TERM};
+const byte wto[] = {13,14,15,TERM};
+const byte wpast[] = {9,10,11,12,TERM};
+const byte whalf[] = {16,17,18,19,TERM};
 
 #define mto_idx 0
 #define mpast_idx 1
 #define mhalf_idx 2
 
-uint8_t* wtime[] = {wto, wpast, whalf};
+const byte* const wtime[] PROGMEM = {wto, wpast, whalf};
 
 uint8_t minLastDisplayed = 0;
 
@@ -299,7 +301,7 @@ void showTime(int hours, int minutes) {
 
 // If there are <= 20 minutes in a hour a correction value of 1 is returned
 // to be added to the hour
-uint8_t showMinutes(int minutes) {
+byte showMinutes(int minutes) {
   
   int tidx = -1; // 5, 10, 15
   int ridx = -1; // 1 past , 2 to 
@@ -375,19 +377,19 @@ uint8_t showMinutes(int minutes) {
   }
   
   if (tidx>=0) {
-    showWord(wminutes[tidx]);
+    showWord((byte*) pgm_read_word (&wminutes[tidx]));
   }
   
   if (ridx>=0) {
-    showWord(wtime[ridx]);
+    showWord((byte*) pgm_read_word (&wtime[ridx]));
   }
 
   if (qidx>=0) {
-    showWord(wtime[qidx]);
+    showWord((byte*) pgm_read_word (&wtime[qidx]));
   }
 
   if ((showMinutes % 5) > 0) {
-    showWord(wminutes[(showMinutes % 5)-1]);
+    showWord((byte*) pgm_read_word (&wminutes[(showMinutes % 5)-1]));
   }
   
   if (minutes < 20) {
@@ -402,39 +404,39 @@ void showHours(int hours) {
     hours -= 12;
   }
   
-  showWord(whours[hours-1]);
+  showWord((byte*) pgm_read_word (&whours[hours-1]));
 }
   
 void testShowAllWordsSeq() {
   FastLED.clear();  
-  showWord(wminutes[0]);
-  showWord(wminutes[1]);
-  showWord(wminutes[2]);
-  showWord(wminutes[3]);
-  showWord(wminutes[mfive_idx]);
-  showWord(wminutes[mten_idx]);
-  showWord(wminutes[mfiveten_idx]);
-  showWord(wtime[mto_idx]);
-  showWord(wtime[mpast_idx]); 
-  showWord(wtime[mhalf_idx]);
-  showWord(whours[0]);
-  showWord(whours[1]); 
-  showWord(whours[2]);
-  showWord(whours[3]);
-  showWord(whours[4]);
-  showWord(whours[5]); 
-  showWord(whours[6]);
-  showWord(whours[7]); 
-  showWord(whours[8]);
-  showWord(whours[9]); 
-  showWord(whours[10]);
-  showWord(whours[11]);
+  showWord((byte*) pgm_read_word (&wminutes[0]));
+  showWord((byte*) pgm_read_word (&wminutes[1]));
+  showWord((byte*) pgm_read_word (&wminutes[2]));
+  showWord((byte*) pgm_read_word (&wminutes[3]));
+  showWord((byte*) pgm_read_word (&wminutes[mfive_idx]));
+  showWord((byte*) pgm_read_word (&wminutes[mten_idx]));
+  showWord((byte*) pgm_read_word (&wminutes[mfiveten_idx]));
+  showWord((byte*) pgm_read_word (&wtime[mto_idx]));
+  showWord((byte*) pgm_read_word (&wtime[mpast_idx])); 
+  showWord((byte*) pgm_read_word (&wtime[mhalf_idx]));
+  showWord((byte*) pgm_read_word (&whours[0]));
+  showWord((byte*) pgm_read_word (&whours[1])); 
+  showWord((byte*) pgm_read_word (&whours[2]));
+  showWord((byte*) pgm_read_word (&whours[3]));
+  showWord((byte*) pgm_read_word (&whours[4]));
+  showWord((byte*) pgm_read_word (&whours[5])); 
+  showWord((byte*) pgm_read_word (&whours[6]));
+  showWord((byte*) pgm_read_word (&whours[7])); 
+  showWord((byte*) pgm_read_word (&whours[8]));
+  showWord((byte*) pgm_read_word (&whours[9])); 
+  showWord((byte*) pgm_read_word (&whours[10]));
+  showWord((byte*) pgm_read_word (&whours[11]));
   FastLED.show();  
 }
 
-void showWord(uint8_t* wordLeds) {
+void showWord(const byte* wordLeds) {
 
-  uint8_t idx = * wordLeds;
+  byte idx = pgm_read_byte(wordLeds);
   
   while (idx < TERM) {
     if (setModeState <= SET_MODE_OFF) {
@@ -443,7 +445,7 @@ void showWord(uint8_t* wordLeds) {
       leds[idx] = COLOR_SET_DISPLAY; 
     }
     wordLeds++;
-    idx = * wordLeds;
+    idx = pgm_read_byte( wordLeds);
   }
 }
 
