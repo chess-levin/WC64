@@ -86,13 +86,13 @@ const byte whtwelve[] PROGMEM = {35,36,37,38,39,TERM};
 
 const byte* const whours[] PROGMEM = {whone, whtwo, whthree, whfour, whfive, whsix, whseven, wheight, whnine, whten, wheleven, whtwelve};
 
-const byte wmone[] = {66,TERM};
-const byte wmtwo[] = {66,65,TERM};
-const byte wmthree[] = {66,65,64,TERM};
-const byte wmfour[] = {66,65,64,67,TERM};
-const byte wmfive[] = {0,1,2,3,TERM};
-const byte wmten[] = {4,5,6,7,TERM};
-const byte wmfiveten[] = {0,1,2,3,4,5,6,7,TERM};
+const byte wmone[] PROGMEM = {66,TERM};
+const byte wmtwo[] PROGMEM = {66,65,TERM};
+const byte wmthree[] PROGMEM = {66,65,64,TERM};
+const byte wmfour[] PROGMEM = {66,65,64,67,TERM};
+const byte wmfive[] PROGMEM = {0,1,2,3,TERM};
+const byte wmten[] PROGMEM = {4,5,6,7,TERM};
+const byte wmfiveten[] PROGMEM = {0,1,2,3,4,5,6,7,TERM};
 
 #define mfive_idx 4
 #define mten_idx 5
@@ -100,9 +100,9 @@ const byte wmfiveten[] = {0,1,2,3,4,5,6,7,TERM};
 
 const byte* const wminutes[] PROGMEM = {wmone, wmtwo, wmthree, wmfour, wmfive, wmten, wmfiveten};
 
-const byte wto[] = {13,14,15,TERM};
-const byte wpast[] = {9,10,11,12,TERM};
-const byte whalf[] = {16,17,18,19,TERM};
+const byte wto[] PROGMEM = {13,14,15,TERM};
+const byte wpast[] PROGMEM = {9,10,11,12,TERM};
+const byte whalf[] PROGMEM = {16,17,18,19,TERM};
 
 #define mto_idx 0
 #define mpast_idx 1
@@ -138,23 +138,22 @@ void setup() {
 }
 
 void loop() {
-    FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
-    
-    if (setModeState == SET_MODE_OFF) {
-      readBrightnessSensor();
-      getRTCData(&t);
-      if (t.min != minLastDisplayed) {
-        showTime(t.hour, t.min);
-        minLastDisplayed = t.min;
-      }
-      delay(2000);
-    } else {
-      queryButtonLoop();
-    }
-    
-    Serial.print("setModeState in main loop: ");
-    Serial.println(setModeState);
+  FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
 
+  if (setModeState == SET_MODE_OFF) {
+    readBrightnessSensor();
+    getRTCData(&t);
+    if (t.min != minLastDisplayed) {
+      showTime(t.hour, t.min);
+      minLastDisplayed = t.min;
+    }
+    delay(2000);
+  } else {
+    queryButtonLoop();
+  }
+  
+  Serial.print("setModeState in main loop: ");
+  Serial.println(setModeState);
 }
 
 void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)()) {
@@ -481,15 +480,6 @@ void readBrightnessSensor() {
   sprintf(buffer, "Brightness [%d,%d] = %d", MIN_BRIGHTNESS, MAX_BRIGHTNESS, brightnessVal);
   Serial.println(buffer);
 }
-
-/*
-int ledIndex(int col, int row) {
-  if (row  % 2 == 0)
-    return row * NUM_ROWS + col;
-   else
-     return row * NUM_ROWS + NUM_ROWS - 1 - col;
-}
-*/
 
 void printRTCDataStruct(struct ts *t) {
     printDate(t);
