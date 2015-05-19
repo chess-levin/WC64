@@ -17,9 +17,13 @@
 #include <Wire.h>
 #include <FastLED.h>
 
+// Params for width and height
+const uint8_t kMatrixWidth = 8;
+const uint8_t kMatrixHeight = 8;
+// Param for different pixel layouts
+const bool kMatrixSerpentineLayout = true;
 // Number of RGB LEDs in the strand
 #define NUM_LEDS 68
-const uint8_t NUM_ROWS  = 8;
 
 // DC3231
 #define BUFF_MAX 128
@@ -31,6 +35,9 @@ unsigned int recv_size = 0;
 CRGB leds[NUM_LEDS];
 // Arduino pin used for Data
 #define DATA_PIN 4
+
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 // Colors for display in different set modes and normal time mode
 #define COLOR_NORMAL_DISPLAY CRGB( 255, 255, 255)
@@ -115,7 +122,15 @@ uint8_t minLastDisplayed = 0;
 long lastPressedTime = 0;
 struct ts t;
 
+#define UPDATES_PER_SECOND 8
+
+byte startpoint[] = {0,2,3,0,1,0,2};
+
 void setup() {
+  delay(3000);
+
+  randomSeed(analogRead(0));
+
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
   
   pinMode(INTERNAL_LED_PIN, OUTPUT);
@@ -127,7 +142,8 @@ void setup() {
   pinMode(SET_BTN1_PIN, INPUT);     
   pinMode(SET_BTN2_PIN, INPUT);
 
-  Serial.begin(9600);  
+  Serial.begin(9600);
+  
   Wire.begin(); // init Wire Library
   DS3231_init(DS3231_INTCN);
   memset(recv, 0, BUFF_MAX);
@@ -143,7 +159,9 @@ void loop() {
   if (setModeState == SET_MODE_OFF) {
     readBrightnessSensor();
     getRTCData(&t);
+        
     if (t.min != minLastDisplayed) {
+      showAnimation();
       showTime(t.hour, t.min);
       minLastDisplayed = t.min;
     }
@@ -154,6 +172,15 @@ void loop() {
   
   Serial.print("setModeState in main loop: ");
   Serial.println(setModeState);
+}
+
+void showAnimation() { 
+  for (byte loopCount = 0; loopCount < kMatrixHeight+3; loopCount++) {
+    matrixRain();  
+    FastLED.show();
+    FastLED.delay(1000 / UPDATES_PER_SECOND);
+  }
+  setStartpoints();
 }
 
 void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)()) {
@@ -291,7 +318,8 @@ void getRTCData(struct ts *t) {
 }
 
 void showTime(int hours, int minutes) {
-  printTime(hours, minutes, 99);
+  Serial.print("Show time: ");
+  printTime(hours, minutes);
   FastLED.clear();
   int hcorrection = showMinutes(minutes);
   showHours(hours + hcorrection);
@@ -483,13 +511,27 @@ void readBrightnessSensor() {
 
 void printRTCDataStruct(struct ts *t) {
     printDate(t);
-    printTime(t->hour, t->min, t->sec);
+    printTime(t);
 }
 
-void printTime(int hours, int minutes, int sec) {
-    char buffer [10];
+void printTime(int hours, int minutes) {
+    char buffer [5];
     
-    sprintf(buffer, "%02d:%02d:%02d", hours, minutes, sec);
+    sprintf(buffer, "%02d:%02d", hours, minutes);
+    Serial.println(buffer);
+}
+
+void printTime(struct ts *t) {
+  uint8_t m = t->min;
+  Serial.print(t->hour, DEC);
+  Serial.print(":");
+  Serial.print(m);
+  Serial.print(":");
+  Serial.println(t->sec);
+  
+  char buffer [12];
+    
+    sprintf(buffer, "%02d:%02d:%02d", (uint8_t) t->hour, t->min, t->sec);
     Serial.println(buffer);
 }
 
@@ -500,4 +542,63 @@ void printDate(struct ts *t)
    sprintf(buffer, "%02d.%02d.%04d, ", t->mday, t->mon, t->year);
    Serial.print(buffer);
 }
+
+void matrixRain() {
+  for (byte x = 0; x < kMatrixWidth; x++) {
+    matrixRainCol(startpoint[x]++, x);
+  }
+}
+
+void matrixRainCol(int currentLine, byte x) {
+  byte startline = MAX(currentLine - 2, 0);
+  byte endline = MIN(kMatrixHeight, currentLine + 1);
+  
+  for (byte y = 0; y < kMatrixHeight; y++) {
+  
+    if ((y >= startline) && (y < endline) ) {
+      if ((y+1 == endline) && (endline < kMatrixHeight))
+        leds[xy2LedIndex(x, y)] = CRGB(255,255,255);
+      else 
+        leds[xy2LedIndex(x, y)] = CRGB(45, 45, 45);
+    } else {
+      if (y < endline)
+        leds[xy2LedIndex(x, y)] = CRGB::Black;
+    }
+  }
+}
+
+void setStartpoints() {
+  startpoint[0] = random(3);
+  startpoint[1] = random(3);
+  startpoint[2] = random(3);
+  startpoint[3] = random(3);
+  startpoint[4] = random(3);
+  startpoint[5] = random(3);
+  startpoint[6] = random(3);
+  startpoint[7] = random(3);
+  startpoint[8] = random(3);
+}
+
+uint16_t xy2LedIndex( uint8_t x, uint8_t y)
+{
+  uint16_t i;
+  
+  if( kMatrixSerpentineLayout == false) {
+    i = (y * kMatrixWidth) + x;
+  }
+
+  if( kMatrixSerpentineLayout == true) {
+    if( y & 0x01) {
+      // Odd rows run backwards
+      uint8_t reverseX = (kMatrixWidth - 1) - x;
+      i = (y * kMatrixWidth) + reverseX;
+    } else {
+      // Even rows run forwards
+      i = (y * kMatrixWidth) + x;
+    }
+  }
+  
+  return i;
+}
+
 
