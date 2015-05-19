@@ -162,6 +162,7 @@ void loop() {
         
     if (t.min != minLastDisplayed) {
       showAnimation();
+      readBrightnessSensor();
       showTime(t.hour, t.min);
       minLastDisplayed = t.min;
     }
