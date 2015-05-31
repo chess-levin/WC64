@@ -44,7 +44,8 @@ CRGB leds[NUM_LEDS];
 #define COLOR_SET_DISPLAY CRGB( 255, 136, 0)
 #define COLOR_SET_DAY CRGB( 255, 0, 0); 
 #define COLOR_SET_MONTH CRGB( 0, 255, 0); 
-#define COLOR_SET_YEAR CRGB( 0, 0, 255); 
+#define COLOR_SET_YEAR CRGB( 0, 0, 255);
+#define LETTER_OFF 0
 
 #define BTN_MIN_PRESSTIME 95    //doftware debouncing: ms button to be pressed before action
 #define TIMEOUT_SET_MODE 30000  //ms no button pressed
@@ -117,10 +118,14 @@ const byte whalf[] PROGMEM = {16,17,18,19,TERM};
 
 const byte* const wtime[] PROGMEM = {wto, wpast, whalf};
 
+byte letterMatrix[NUM_LEDS];
+
 uint8_t minLastDisplayed = 0;
 
 long lastPressedTime = 0;
 struct ts t;
+
+void (*animationCalback)();
 
 #define UPDATES_PER_SECOND 8
 
@@ -132,6 +137,8 @@ void setup() {
   randomSeed(analogRead(0));
 
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.clear();
+  readBrightnessSensor();
   
   pinMode(INTERNAL_LED_PIN, OUTPUT);
   digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
@@ -147,45 +154,48 @@ void setup() {
   Wire.begin(); // init Wire Library
   DS3231_init(DS3231_INTCN);
   memset(recv, 0, BUFF_MAX);
-  
-  //Serial.println("Setting time");
-  //           TssmmhhWDDMMYYYY aka set time
-  //parse_cmd("T001919631012015",16);
 }
 
 void loop() {
-  FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
+//  FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
 
   if (setModeState == SET_MODE_OFF) {
-    readBrightnessSensor();
+    animationCalback = &showMatrixAnimation;
     getRTCData(&t);
         
     if (t.min != minLastDisplayed) {
-      showAnimation();
-      readBrightnessSensor();
       showTime(t.hour, t.min);
       minLastDisplayed = t.min;
+      showTime(t.hour, t.min);
     }
-    delay(2000);
+    delay(1000);
+    
   } else {
+    animationCalback = &showNoAnimation;
     queryButtonLoop();
   }
   
-  Serial.print("setModeState in main loop: ");
+  Serial.print(F("setModeState in main loop: "));
   Serial.println(setModeState);
 }
 
-void showAnimation() { 
-  for (byte loopCount = 0; loopCount < kMatrixHeight+3; loopCount++) {
-    matrixRain();  
-    FastLED.show();
-    FastLED.delay(1000 / UPDATES_PER_SECOND);
-  }
-  setStartpoints();
+
+void showAnimation( void (*animation)() ) {
+  readBrightnessSensor();
+  animation();
+  resetLetterMatrix();
 }
 
-void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)()) {
-      if (digitalRead(btnPin) == LOW) {
+void showTime(int hours, int minutes) {
+  Serial.print(F("Show time: "));
+  printTime(hours, minutes);
+  int hcorrection = showMinutes(minutes);
+  showHours(hours + hcorrection);
+  showAnimation(animationCalback);
+}
+
+void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)() ) {
+    if (digitalRead(btnPin) == LOW) {
       *pressed |= mask;
     } else if ((*pressed & mask) == mask) {
       lastPressedTime = millis();
@@ -204,46 +214,46 @@ void queryButtonLoop() {
   }
   
   if (setModeState > SET_MODE_OFF) {
-    Serial.println("timeout");
+    Serial.println(F("timeout"));
     resetModeState();
   }
 }
 
 void initSetMode() {
   detachInterrupt(SET_BTN1_IRQ);
-  Serial.println("initSetMode ");
+  Serial.println(F("initSetMode "));
 
   nextSetMode();
 }
 
 void nextStep() {
   if (setModeState == SET_MODE_DAY) {
-    Serial.println("Set next day");
+    Serial.println(F("Set next day"));
     t.mday+=1;
     if (t.mday > 31) t.mday = 1;
     showDay(t.mday);
   } else   if (setModeState == SET_MODE_MONTH) {
-    Serial.println("Set next month");
+    Serial.println(F("Set next month"));
     t.mon+=1;
     if (t.mon > 12) t.mon = 1;
     showMonth(t.mon);
   } else   if (setModeState == SET_MODE_YEAR) {
-    Serial.println("Set next year");
+    Serial.println(F("Set next year"));
     t.year+=1;
     if (t.year > 2020) t.year = START_WITH_YEAR;
     showYear(t.year);
   } else   if (setModeState == SET_MODE_HOURS) {
-    Serial.println("Set next hour");
+    Serial.println(F("Set next hour"));
     t.hour++;
     if (t.hour > 23) t.hour = 0;
     showTime(t.hour, t.min);
   } else   if (setModeState == SET_MODE_5MINUTES) {
-    Serial.println("Set next 5 minute word");
+    Serial.println(F("Set next 5 minute word"));
     t.min+=5;
     if (t.min > 55) t.min = 0;
     showTime(t.hour, t.min);
   } else   if (setModeState == SET_MODE_1MINUTES) {
-    Serial.println("Set next minute dot");
+    Serial.println(F("Set next minute dot"));
     t.min+=1;
     if (t.min %5 == 0) t.min -= 5;
     showTime(t.hour, t.min);
@@ -258,14 +268,14 @@ void nextStep() {
     }
     showTime(t.hour, t.min);
   } else {
-    Serial.println("Unknown setModeState");
+    Serial.println(F("Unknown setModeState"));
   }
 }
 
 void nextSetMode() {
   setModeState++;
 
-  Serial.print("Switching to setModeState: ");
+  Serial.print(F("Switching to setModeState: "));
   Serial.println(setModeState);
   
   if (setModeState == SET_MODE_HOURS) {
@@ -293,7 +303,7 @@ void nextSetMode() {
   }
 
   if (setModeState > SET_MODE_MAX) {
-    Serial.println("===> Setting new Date & Time to: ");
+    Serial.println(F("===> Setting new Date & Time to: "));
     printRTCDataStruct(&t);
     DS3231_set(t);
     setModeState = SET_MODE_DUMMY;
@@ -304,7 +314,7 @@ void nextSetMode() {
 void resetModeState() {
   if (setModeState != SET_MODE_OFF) {
     setModeState = SET_MODE_OFF;
-    Serial.println("Resetting setModeState after timeout pressing no button. Fallback to old Time & Date.");
+    Serial.println(F("Resetting setModeState after timeout pressing no button. Fallback to old Time & Date."));
     attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
   }
 }
@@ -318,14 +328,6 @@ void getRTCData(struct ts *t) {
     printRTCDataStruct(t);
 }
 
-void showTime(int hours, int minutes) {
-  Serial.print("Show time: ");
-  printTime(hours, minutes);
-  FastLED.clear();
-  int hcorrection = showMinutes(minutes);
-  showHours(hours + hcorrection);
-  FastLED.show();
-}
 
 // If there are <= 20 minutes in a hour a correction value of 1 is returned
 // to be added to the hour
@@ -463,15 +465,10 @@ void testShowAllWordsSeq() {
 }
 
 void showWord(const byte* wordLeds) {
-
   byte idx = pgm_read_byte(wordLeds);
   
   while (idx < TERM) {
-    if (setModeState <= SET_MODE_OFF) {
-      leds[idx] = COLOR_NORMAL_DISPLAY; 
-    } else {
-      leds[idx] = COLOR_SET_DISPLAY; 
-    }
+    letterMatrix[idx] = 1; 
     wordLeds++;
     idx = pgm_read_byte( wordLeds);
   }
@@ -504,7 +501,7 @@ void showYear(int year) {
 void readBrightnessSensor() {
   char buffer [28];
   int brightnessVal = map(analogRead(BRIGHNTNESS_SENSOR_PIN), 0, 1023, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
-  FastLED.setBrightness( brightnessVal );
+  FastLED.setBrightness(brightnessVal);
 
   sprintf(buffer, "Brightness [%d,%d] = %d", MIN_BRIGHTNESS, MAX_BRIGHTNESS, brightnessVal);
   Serial.println(buffer);
@@ -544,31 +541,81 @@ void printDate(struct ts *t)
    Serial.print(buffer);
 }
 
-void matrixRain() {
-  for (byte x = 0; x < kMatrixWidth; x++) {
-    matrixRainCol(startpoint[x]++, x);
+void showNoAnimation() {
+  FastLED.clear();
+  for(byte i = 0; i < NUM_LEDS; i++) {
+      if (letterMatrix[i] == 1) {
+          leds[i] = CRGB(255,255,255);
+      }
+  }
+  FastLED.show();
+}
+
+void showMatrixAnimation() {
+  setMatrixAnimStartpoints();
+  for (byte loopCount = 0; loopCount < kMatrixHeight+3; loopCount++) {
+    matrixRainAnimation();
+    FastLED.show();
+    FastLED.delay(1000 / UPDATES_PER_SECOND);
   }
 }
 
-void matrixRainCol(int currentLine, byte x) {
+void matrixRainAnimation() {
+  for (byte x = 0; x < kMatrixWidth; x++) {
+    matrixRainAnimCol(startpoint[x]++, x);
+  }
+}
+
+void matrixRainAnimCol(int currentLine, byte x) {
   byte startline = MAX(currentLine - 2, 0);
   byte endline = MIN(kMatrixHeight, currentLine + 1);
   
   for (byte y = 0; y < kMatrixHeight; y++) {
   
+    if (y == 0)  {
+      if (letterMatrix[66] == 1) {
+        leds[66] = CRGB(255,255,255);
+      } else {
+        leds[66] = CRGB::Black;
+      }
+      if (letterMatrix[65] == 1) {
+        leds[65] = CRGB(255,255,255);
+      } else {
+        leds[65] = CRGB::Black;
+      }
+    }
+
+    if (y == kMatrixHeight-1)  {
+      if (letterMatrix[64] == 1) {
+        leds[64] = CRGB(255,255,255);
+      } else {
+        leds[64] = CRGB::Black;
+      }
+      if (letterMatrix[67] == 1) {
+        leds[67] = CRGB(255,255,255);
+      } else {
+        leds[67] = CRGB::Black;
+      }
+    }
+   
     if ((y >= startline) && (y < endline) ) {
       if ((y+1 == endline) && (endline < kMatrixHeight))
         leds[xy2LedIndex(x, y)] = CRGB(255,255,255);
       else 
         leds[xy2LedIndex(x, y)] = CRGB(45, 45, 45);
     } else {
-      if (y < endline)
-        leds[xy2LedIndex(x, y)] = CRGB::Black;
-    }
+      if (y < endline) {
+        if (letterMatrix[xy2LedIndex(x, y)] == 1) {
+          leds[xy2LedIndex(x, y)] = CRGB(255,255,255);
+        } else {  
+          leds[xy2LedIndex(x, y)] = CRGB::Black;
+        }
+      }
+    }  
   }
 }
 
-void setStartpoints() {
+void setMatrixAnimStartpoints() {
   startpoint[0] = random(3);
   startpoint[1] = random(3);
   startpoint[2] = random(3);
@@ -578,6 +625,13 @@ void setStartpoints() {
   startpoint[6] = random(3);
   startpoint[7] = random(3);
   startpoint[8] = random(3);
+}
+
+
+void resetLetterMatrix() {
+  for (int i=0; i <NUM_LEDS; i++) {
+    letterMatrix[i] = LETTER_OFF;
+  }
 }
 
 uint16_t xy2LedIndex( uint8_t x, uint8_t y)
