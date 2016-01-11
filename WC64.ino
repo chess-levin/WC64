@@ -161,22 +161,23 @@ void loop() {
 
   if (setModeState == SET_MODE_OFF) {
     animationCalback = &showMatrixAnimation;
+//    animationCalback = &showNoAnimation;
     getRTCData(&t);
         
     if (t.min != minLastDisplayed) {
-      showTime(t.hour, t.min);
       minLastDisplayed = t.min;
       showTime(t.hour, t.min);
     }
     delay(1000);
-    
+    readBrightnessSensor();
+  
   } else {
-    animationCalback = &showNoAnimation;
-    queryButtonLoop();
+     Serial.print(F("setModeState in main loop: "));
+     Serial.println(setModeState);
+     animationCalback = &showNoAnimation;
+     queryButtonLoop();
   }
   
-  Serial.print(F("setModeState in main loop: "));
-  Serial.println(setModeState);
 }
 
 
@@ -499,44 +500,35 @@ void showYear(int year) {
 }
 
 void readBrightnessSensor() {
-  char buffer [28];
-  int brightnessVal = map(analogRead(BRIGHNTNESS_SENSOR_PIN), 0, 1023, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+  char buffer [26];
+  int brightnessInput = analogRead(BRIGHNTNESS_SENSOR_PIN);
+  int brightnessVal = map(brightnessInput, 0, 1023, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
   FastLED.setBrightness(brightnessVal);
 
-  sprintf(buffer, "Brightness [%d,%d] = %d", MIN_BRIGHTNESS, MAX_BRIGHTNESS, brightnessVal);
+  sprintf(buffer, "Brightness %d => %d", brightnessInput, brightnessVal);
   Serial.println(buffer);
 }
 
 void printRTCDataStruct(struct ts *t) {
-    printDate(t);
-    printTime(t);
+   printDate(t);
+   printTime(t);
 }
 
 void printTime(int hours, int minutes) {
-    char buffer [5];
-    
+    char buffer [6]; 
     sprintf(buffer, "%02d:%02d", hours, minutes);
     Serial.println(buffer);
 }
 
 void printTime(struct ts *t) {
-  uint8_t m = t->min;
-  Serial.print(t->hour, DEC);
-  Serial.print(":");
-  Serial.print(m);
-  Serial.print(":");
-  Serial.println(t->sec);
-  
-  char buffer [12];
-    
-    sprintf(buffer, "%02d:%02d:%02d", (uint8_t) t->hour, t->min, t->sec);
-    Serial.println(buffer);
+  char buffer [12]; 
+  sprintf(buffer, "%02d:%02d:%02d", (uint8_t) t->hour, t->min, t->sec);
+  Serial.println(buffer);
 }
 
 void printDate(struct ts *t)
 {
-   char buffer [12];
-    
+   char buffer [15];
    sprintf(buffer, "%02d.%02d.%04d, ", t->mday, t->mon, t->year);
    Serial.print(buffer);
 }
@@ -552,7 +544,9 @@ void showNoAnimation() {
 }
 
 void showMatrixAnimation() {
+  Serial.println("showMatrixAnimation()");
   setMatrixAnimStartpoints();
+  
   for (byte loopCount = 0; loopCount < kMatrixHeight+3; loopCount++) {
     matrixRainAnimation();
     FastLED.show();
@@ -561,8 +555,10 @@ void showMatrixAnimation() {
 }
 
 void matrixRainAnimation() {
-  for (byte x = 0; x < kMatrixWidth; x++) {
-    matrixRainAnimCol(startpoint[x]++, x);
+    Serial.println("matrixRainAnimation()");
+    
+    for (byte x = 0; x < kMatrixWidth; x++) {
+      matrixRainAnimCol(startpoint[x]++, x);
   }
 }
 
@@ -596,7 +592,7 @@ void matrixRainAnimCol(int currentLine, byte x) {
       } else {
         leds[67] = CRGB::Black;
       }
-    }
+    } 
    
     if ((y >= startline) && (y < endline) ) {
       if ((y+1 == endline) && (endline < kMatrixHeight))
@@ -611,7 +607,8 @@ void matrixRainAnimCol(int currentLine, byte x) {
           leds[xy2LedIndex(x, y)] = CRGB::Black;
         }
       }
-    }  
+    }
+    
   }
 }
 
@@ -624,7 +621,6 @@ void setMatrixAnimStartpoints() {
   startpoint[5] = random(3);
   startpoint[6] = random(3);
   startpoint[7] = random(3);
-  startpoint[8] = random(3);
 }
 
 
@@ -652,7 +648,7 @@ uint16_t xy2LedIndex( uint8_t x, uint8_t y)
       i = (y * kMatrixWidth) + x;
     }
   }
-  
+ 
   return i;
 }
 
