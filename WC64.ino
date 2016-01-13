@@ -130,6 +130,8 @@ void (*animationCalback)();
 #define UPDATES_PER_SECOND 8
 
 byte startpoint[] = {0,2,3,0,1,0,2};
+int averageBrigtness[] = {500,500,500,500,500,500};
+byte averageBrigtnessIdx = 0;
 
 void setup() {
   delay(3000);
@@ -138,7 +140,6 @@ void setup() {
 
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
   FastLED.clear();
-  readBrightnessSensor();
   
   pinMode(INTERNAL_LED_PIN, OUTPUT);
   digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
@@ -157,7 +158,7 @@ void setup() {
 }
 
 void loop() {
-//  FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
+  FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
 
   if (setModeState == SET_MODE_OFF) {
     animationCalback = &showMatrixAnimation;
@@ -168,7 +169,7 @@ void loop() {
       minLastDisplayed = t.min;
       showTime(t.hour, t.min);
     }
-    delay(1000);
+    delay(5000);
     readBrightnessSensor();
   
   } else {
@@ -176,13 +177,13 @@ void loop() {
      Serial.println(setModeState);
      animationCalback = &showNoAnimation;
      queryButtonLoop();
+     showTime(t.hour, t.min);
   }
   
 }
 
 
 void showAnimation( void (*animation)() ) {
-  readBrightnessSensor();
   animation();
   resetLetterMatrix();
 }
@@ -500,12 +501,31 @@ void showYear(int year) {
 }
 
 void readBrightnessSensor() {
-  char buffer [26];
-  int brightnessInput = analogRead(BRIGHNTNESS_SENSOR_PIN);
-  int brightnessVal = map(brightnessInput, 0, 1023, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+  char buffer[26];
+  int sum = 0;
+
+  averageBrigtness[averageBrigtnessIdx] = analogRead(BRIGHNTNESS_SENSOR_PIN);
+
+  Serial.print(F("Brightness Measures : "));
+
+  averageBrigtnessIdx++;
+  if (averageBrigtnessIdx >= (sizeof(averageBrigtness)/sizeof(int))) averageBrigtnessIdx = 0;
+  
+  for (int i = 0; i < (sizeof(averageBrigtness)/sizeof(int)); i++) {
+    Serial.print(averageBrigtness[i]);
+    Serial.print(", ");  
+    sum += averageBrigtness[i];
+  }
+
+  int average = sum / (sizeof(averageBrigtness)/sizeof(int));
+  Serial.print(F("Average of Measures: "));
+  Serial.println(average);  
+
+  int brightnessVal = map(average, 0, 1023, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+  
   FastLED.setBrightness(brightnessVal);
 
-  sprintf(buffer, "Brightness %d => %d", brightnessInput, brightnessVal);
+  sprintf(buffer, "Brightness %d => %d", average, brightnessVal);
   Serial.println(buffer);
 }
 
