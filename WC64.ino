@@ -75,7 +75,7 @@ volatile int setModeState = SET_MODE_OFF;
 
 #define INTERNAL_LED_PIN 13
 
-#define BRIGHNTNESS_SENSOR_PIN 2
+#define BRIGHNTNESS_SENSOR_PIN A3
 
 #define TERM 255
 
@@ -144,11 +144,11 @@ void setup() {
   pinMode(INTERNAL_LED_PIN, OUTPUT);
   digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
   
-  attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
+//  attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
 //  attachInterrupt(SET_BTN2_IRQ, setValue, RISING);
  
-  pinMode(SET_BTN1_PIN, INPUT);     
-  pinMode(SET_BTN2_PIN, INPUT);
+  //pinMode(SET_BTN1_PIN, INPUT);     
+  //pinMode(SET_BTN2_PIN, INPUT);
 
   Serial.begin(9600);
   
@@ -176,7 +176,7 @@ void loop() {
      Serial.print(F("setModeState in main loop: "));
      Serial.println(setModeState);
      animationCalback = &showNoAnimation;
-     queryButtonLoop();
+     //queryButtonLoop();
      showTime(t.hour, t.min);
   }
   
@@ -196,6 +196,7 @@ void showTime(int hours, int minutes) {
   showAnimation(animationCalback);
 }
 
+/*
 void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)() ) {
     if (digitalRead(btnPin) == LOW) {
       *pressed |= mask;
@@ -204,7 +205,7 @@ void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)() ) {
       action();
       *pressed &= ~mask;
     }
-}
+} 
 
 void queryButtonLoop() {
   byte pressed = 0b00000000;
@@ -320,6 +321,7 @@ void resetModeState() {
     attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
   }
 }
+*/
 
 void getRTCData(struct ts *t) {
     float temperature;
