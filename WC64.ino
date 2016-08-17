@@ -16,7 +16,19 @@
 #include <ds3231.h>
 #include <Wire.h>
 #include <FastLED.h>
+#include <SoftwareSerial.h>
 
+/////////////////////////
+// DS3231 Definitions
+//
+#define BUFF_MAX 128
+//uint8_t time[8];
+char recv[BUFF_MAX];
+unsigned int recv_size = 0;
+
+////////////////////////////
+// WS2812 Definitions
+//
 // Params for width and height
 const uint8_t kMatrixWidth = 8;
 const uint8_t kMatrixHeight = 8;
@@ -25,15 +37,9 @@ const bool kMatrixSerpentineLayout = true;
 // Number of RGB LEDs in the strand
 #define NUM_LEDS 68
 
-// DC3231
-#define BUFF_MAX 128
-uint8_t time[8];
-char recv[BUFF_MAX];
-unsigned int recv_size = 0;
-
 // Define the array of leds
 CRGB leds[NUM_LEDS];
-// Arduino pin used for Data
+// Arduino pin used for LED (WS2812) Data
 #define DATA_PIN 4
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
@@ -133,32 +139,89 @@ byte startpoint[] = {0,2,3,0,1,0,2};
 int averageBrigtness[] = {500,500,500,500,500,500};
 byte averageBrigtnessIdx = 0;
 
+///////////////////////////////////////////////////////////////////
+// Bluetooth definitions
+//
+#define BT_BUFF_MAX 25
+#define BT_END_TOKEN '$'
+#define BT_PARAM_SEP '&'
+#define rxPin 10
+#define txPin 11
+
+// set up a new serial port
+SoftwareSerial mySerial =  SoftwareSerial(rxPin, txPin);
+
+unsigned long bt_prev, bright_prev, interval = 5000;
+char uptime[20] = "12.45.78, 12:45:78";
+char bt_buff[BT_BUFF_MAX];
+int bt_i = 0;
+
 void setup() {
-  delay(3000);
+  //delay(3000);
+  Serial.begin(9600);
+  pinMode(rxPin, INPUT);
+  pinMode(txPin, OUTPUT);  
+  mySerial.begin(9600);
 
-  randomSeed(analogRead(0));
-
+  Wire.begin(); // init Wire Library
+  DS3231_init(DS3231_INTCN);
+  memset(recv, 0, BUFF_MAX);
+  DS3231_get(&t);
+  sprintf(uptime, "%02d.%02d.%04d, %02d:%02d:%02d", t.mday, t.mon, t.year, (uint8_t) t.hour, t.min, t.sec);
+  Serial.print(F("Started at")); Serial.println(uptime);
+  
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
   FastLED.clear();
   
   pinMode(INTERNAL_LED_PIN, OUTPUT);
   digitalWrite(INTERNAL_LED_PIN, LOW);  // turn LED OFF
-  
-//  attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
-//  attachInterrupt(SET_BTN2_IRQ, setValue, RISING);
- 
-  //pinMode(SET_BTN1_PIN, INPUT);     
-  //pinMode(SET_BTN2_PIN, INPUT);
-
-  Serial.begin(9600);
-  
-  Wire.begin(); // init Wire Library
-  DS3231_init(DS3231_INTCN);
-  memset(recv, 0, BUFF_MAX);
+  randomSeed(analogRead(0));  
 }
 
 void loop() {
-  FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
+  //FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
+  unsigned long now = millis();
+
+////////////////
+  char txtbuf[75];     
+  char c;
+    
+  if (mySerial.available()) {
+    c = (char) mySerial.read();
+    //Serial.write(c);
+    bt_buff[bt_i++] = c;
+    if (bt_i==1) {
+      Serial.println(F("Receiving new data via BT."));
+      bt_prev = now;
+    }
+  }
+  
+  if ((bt_i>0) && (now - bt_prev > interval)) {
+    Serial.println(F("Timeout. Resetting transmission."));
+    bt_i = 0;
+    setModeState = SET_MODE_OFF;
+  }
+  
+  if (bt_i < BT_BUFF_MAX-1) {
+    if (c == BT_END_TOKEN) {
+      bt_buff[bt_i++] = 0;   
+      
+      sprintf(txtbuf, "End Token received. Received %d Bytes Data: ", bt_i-1);
+      Serial.println(txtbuf);
+
+      Serial.println(bt_buff);
+      parseCommand(bt_buff);
+      bt_i = 0;
+      setModeState = SET_MODE_OFF;
+    } 
+  } else {
+    bt_buff[bt_i++] = 0;
+    sprintf(txtbuf, "Buffer overflow: %d Bytes received. Missing end token.", bt_i-1);
+    Serial.println(txtbuf);
+    Serial.println(bt_buff);
+    bt_i = 0;
+    setModeState = SET_MODE_OFF;
+  }
 
   if (setModeState == SET_MODE_OFF) {
     animationCalback = &showMatrixAnimation;
@@ -169,19 +232,164 @@ void loop() {
       minLastDisplayed = t.min;
       showTime(t.hour, t.min);
     }
-    delay(5000);
-    readBrightnessSensor();
+    
+    if (now - bright_prev > interval) {
+      readBrightnessSensor();
+      printRTCDataStruct(&t);
+      bright_prev = now;
+    }
   
   } else {
      Serial.print(F("setModeState in main loop: "));
      Serial.println(setModeState);
      animationCalback = &showNoAnimation;
-     //queryButtonLoop();
-     showTime(t.hour, t.min);
+     FastLED.clear();
+     //showTime(t.hour, t.min);
   }
   
 }
 
+void loopReadBT() {
+  char txtbuf[75];     
+  char c;
+  unsigned long now = millis();
+    
+  if (mySerial.available()) {
+    c = (char) mySerial.read();
+    //Serial.write(c);
+    bt_buff[bt_i++] = c;
+    if (bt_i==1) {
+      Serial.println(F("Receiving new data via BT."));
+      bt_prev = now;
+    }
+  }
+  
+  if ((bt_i>0) && (now - bt_prev > interval)) {
+    Serial.println(F("Timeout. Resetting transmission."));
+    bt_i = 0;
+    setModeState = SET_MODE_OFF;
+  }
+  
+  if (bt_i < BT_BUFF_MAX-1) {
+    if (c == BT_END_TOKEN) {
+      bt_buff[bt_i++] = 0;   
+      
+      sprintf(txtbuf, "End Token received. Received %d Bytes Data: ", bt_i-1);
+      Serial.println(txtbuf);
+
+      Serial.println(bt_buff);
+      parseCommand(bt_buff);
+      bt_i = 0;
+      setModeState = SET_MODE_OFF;
+    } 
+  } else {
+    bt_buff[bt_i++] = 0;
+    sprintf(txtbuf, "Buffer overflow: %d Bytes received. Missing end token.", bt_i-1);
+    Serial.println(txtbuf);
+    Serial.println(bt_buff);
+    bt_i = 0;
+    setModeState = SET_MODE_OFF;
+  }
+}
+
+void parseCommand(char* commandstr) {
+  char * pch;
+  char token[] = {BT_PARAM_SEP, BT_END_TOKEN, 0};
+
+  pch = strtok (commandstr, token);
+  
+  if (strcmp(commandstr, "01") == 0) {
+    parseConnect(&commandstr[3]);
+  } else if (strcmp(commandstr, "02") == 0) {
+    parseDateTime(&commandstr[3]);
+  } else if (strcmp(commandstr, "03") == 0) {
+    sendSysInfo();
+  }
+  else {
+    Serial.print(F("Unknown command: "));
+    Serial.println(pch);
+  }
+}
+
+void sendSysInfo() {
+  char txtbuf [60];
+  char tempbuf[6];
+
+  float t = DS3231_get_treg();
+  
+  dtostrf(t, 4, 2, tempbuf);
+  sprintf(txtbuf,"Running since %s, Temperatur %s C", uptime, tempbuf);
+  Serial.println(txtbuf);  
+
+  mySerial.write(txtbuf);
+}
+
+void parseConnect(char* con) {
+  char * pch;
+  int i = 0;
+  char tokens[] = {BT_END_TOKEN, BT_PARAM_SEP, 0};
+  String arg;
+  
+  Serial.print("Status: ");
+  pch = strtok(con, tokens);
+
+  while (pch != NULL)
+  {
+    i++;
+    if (i==1) {
+      arg = pch;
+    }
+    pch = strtok (NULL, tokens);
+  }
+  
+  if (i == 1) {
+    Serial.println(arg);
+    setModeState = SET_MODE_LEDTEST;
+  } else {
+    char txtbuf [40]; 
+    sprintf(txtbuf, "Expecting %d arguments, parsed %d.", 1, i);
+    Serial.println(txtbuf);
+  }
+}
+
+void parseDateTime(char* datetime) {
+  char * pch;
+  int i = 0;
+  struct ts t;
+  char tokens[] = {BT_END_TOKEN, BT_PARAM_SEP, 0};
+
+  Serial.print(F("Set date/time to : "));
+  pch = strtok(datetime, tokens);
+
+  while (pch != NULL)
+  {
+    i++;
+    if (i==1) {
+      t.hour = atoi(pch);
+    } else if (i==2) {
+      t.min = atoi(pch);
+    } else if (i==3) {
+      t.sec = atoi(pch);
+    } else if (i==4) {
+      t.mday = atoi(pch);
+    } else if (i==5) {
+      t.mon = atoi(pch);
+    } else if (i==6) {
+      t.year = atoi(pch);    
+    }    
+    //Serial.println (pch);
+    pch = strtok(NULL, tokens);
+  }
+  
+  if (i == 6) {
+    DS3231_set(t);
+    showTime(t.hour, t.min);
+  } else {
+    char buffer [40]; 
+    sprintf(buffer, "Expecting %d arguments, parsed %d.", 6, i);
+    Serial.println(buffer);
+  }
+}
 
 void showAnimation( void (*animation)() ) {
   animation();
@@ -196,132 +404,6 @@ void showTime(int hours, int minutes) {
   showAnimation(animationCalback);
 }
 
-/*
-void checkButton(byte mask, byte *pressed, byte btnPin, void (*action)() ) {
-    if (digitalRead(btnPin) == LOW) {
-      *pressed |= mask;
-    } else if ((*pressed & mask) == mask) {
-      lastPressedTime = millis();
-      action();
-      *pressed &= ~mask;
-    }
-} 
-
-void queryButtonLoop() {
-  byte pressed = 0b00000000;
-  lastPressedTime = millis();
-  
-  while ((millis() - lastPressedTime < TIMEOUT_SET_MODE) && (setModeState > SET_MODE_OFF)){
-    checkButton(0b000001, &pressed, SET_BTN1_PIN, &nextSetMode);
-    checkButton(0b000010, &pressed, SET_BTN2_PIN, &nextStep);
-  }
-  
-  if (setModeState > SET_MODE_OFF) {
-    Serial.println(F("timeout"));
-    resetModeState();
-  }
-}
-
-void initSetMode() {
-  detachInterrupt(SET_BTN1_IRQ);
-  Serial.println(F("initSetMode "));
-
-  nextSetMode();
-}
-
-void nextStep() {
-  if (setModeState == SET_MODE_DAY) {
-    Serial.println(F("Set next day"));
-    t.mday+=1;
-    if (t.mday > 31) t.mday = 1;
-    showDay(t.mday);
-  } else   if (setModeState == SET_MODE_MONTH) {
-    Serial.println(F("Set next month"));
-    t.mon+=1;
-    if (t.mon > 12) t.mon = 1;
-    showMonth(t.mon);
-  } else   if (setModeState == SET_MODE_YEAR) {
-    Serial.println(F("Set next year"));
-    t.year+=1;
-    if (t.year > 2020) t.year = START_WITH_YEAR;
-    showYear(t.year);
-  } else   if (setModeState == SET_MODE_HOURS) {
-    Serial.println(F("Set next hour"));
-    t.hour++;
-    if (t.hour > 23) t.hour = 0;
-    showTime(t.hour, t.min);
-  } else   if (setModeState == SET_MODE_5MINUTES) {
-    Serial.println(F("Set next 5 minute word"));
-    t.min+=5;
-    if (t.min > 55) t.min = 0;
-    showTime(t.hour, t.min);
-  } else   if (setModeState == SET_MODE_1MINUTES) {
-    Serial.println(F("Set next minute dot"));
-    t.min+=1;
-    if (t.min %5 == 0) t.min -= 5;
-    showTime(t.hour, t.min);
-  } else if (setModeState == SET_MODE_LEDTEST) {
-    if ((t.min%5) == 0) {
-      t.min+=2;
-    } else {
-      t.min+=3;
-    }
-    if (t.min > 60) { 
-      t.min = 0;
-    }
-    showTime(t.hour, t.min);
-  } else {
-    Serial.println(F("Unknown setModeState"));
-  }
-}
-
-void nextSetMode() {
-  setModeState++;
-
-  Serial.print(F("Switching to setModeState: "));
-  Serial.println(setModeState);
-  
-  if (setModeState == SET_MODE_HOURS) {
-    t.hour=12;
-    t.min=0;
-    t.sec=0;
-    showTime(t.hour, t.min);
-  } else if (setModeState == SET_MODE_5MINUTES) {
-    t.min=5;
-    showTime(t.hour, t.min);
-  } else if (setModeState == SET_MODE_1MINUTES) {
-    t.min++;
-    showTime(t.hour, t.min);    
-  } else if (setModeState == SET_MODE_LEDTEST) {
-    testShowAllWordsSeq();
-  } else if (setModeState == SET_MODE_DAY) {
-    showDay(t.mday);
-  } else if (setModeState == SET_MODE_MONTH) {
-    showMonth(t.mon);
-  } else if (setModeState == SET_MODE_YEAR) {
-    t.mday;
-    t.mon;
-    t.year=START_WITH_YEAR;
-    showYear(t.year);
-  }
-
-  if (setModeState > SET_MODE_MAX) {
-    Serial.println(F("===> Setting new Date & Time to: "));
-    printRTCDataStruct(&t);
-    DS3231_set(t);
-    setModeState = SET_MODE_DUMMY;
-    attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
-  }
-}
-
-void resetModeState() {
-  if (setModeState != SET_MODE_OFF) {
-    setModeState = SET_MODE_OFF;
-    Serial.println(F("Resetting setModeState after timeout pressing no button. Fallback to old Time & Date."));
-    attachInterrupt(SET_BTN1_IRQ, initSetMode, RISING);
-  }
-}
-*/
 
 void getRTCData(struct ts *t) {
     float temperature;
@@ -329,7 +411,7 @@ void getRTCData(struct ts *t) {
    
     DS3231_get(t); //Get time
 
-    printRTCDataStruct(t);
+    //printRTCDataStruct(t);
 }
 
 
@@ -476,30 +558,6 @@ void showWord(const byte* wordLeds) {
     wordLeds++;
     idx = pgm_read_byte( wordLeds);
   }
-}
-
-void showDay(int day) {
-  FastLED.clear();
-  for(byte i = 0; i < day; i++) {
-    leds[i] = COLOR_SET_DAY; 
-  }
-  FastLED.show();
-}
-  
-void showMonth(int month) {
-  FastLED.clear();
-  for(byte i = 0; i < month; i++) {
-    leds[i] = COLOR_SET_MONTH; 
-  }
-  FastLED.show();
-}
-  
-void showYear(int year) {
-  FastLED.clear();
-  for(byte i = 0; i < year-2000; i++) {
-    leds[i] = COLOR_SET_YEAR; 
-  }
-  FastLED.show();
 }
 
 void readBrightnessSensor() {
