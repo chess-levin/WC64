@@ -52,6 +52,7 @@ CRGB leds[NUM_LEDS];
 #define COLOR_SET_MONTH CRGB( 0, 255, 0); 
 #define COLOR_SET_YEAR CRGB( 0, 0, 255);
 #define LETTER_OFF 0
+#define SETMODE_INDICATOR 8
 
 #define BTN_MIN_PRESSTIME 95    //doftware debouncing: ms button to be pressed before action
 #define TIMEOUT_SET_MODE 30000  //ms no button pressed
@@ -73,11 +74,6 @@ volatile int setModeState = SET_MODE_OFF;
 
 #define MIN_BRIGHTNESS 4 
 #define MAX_BRIGHTNESS 65
-
-#define SET_BTN1_PIN 2      // set mode button; Interrupt 0 is on DIGITAL PIN 2!
-#define SET_BTN2_PIN 3      // set value button; Interrupt 1 is on DIGITAL PIN 3!
-#define SET_BTN1_IRQ 0      // set mode button; Interrupt 0 is on DIGITAL PIN 2!
-#define SET_BTN2_IRQ 1      // set value button; Interrupt 1 is on DIGITAL PIN 3!
 
 #define INTERNAL_LED_PIN 13
 
@@ -199,7 +195,7 @@ void loop() {
   if ((bt_i>0) && (now - bt_prev > interval)) {
     Serial.println(F("Timeout. Resetting transmission."));
     bt_i = 0;
-    setModeState = SET_MODE_OFF;
+    setModeState = SET_MODE_DUMMY;
   }
   
   if (bt_i < BT_BUFF_MAX-1) {
@@ -212,7 +208,6 @@ void loop() {
       Serial.println(bt_buff);
       parseCommand(bt_buff);
       bt_i = 0;
-      setModeState = SET_MODE_OFF;
     } 
   } else {
     bt_buff[bt_i++] = 0;
@@ -220,18 +215,21 @@ void loop() {
     Serial.println(txtbuf);
     Serial.println(bt_buff);
     bt_i = 0;
-    setModeState = SET_MODE_OFF;
+    setModeState = SET_MODE_DUMMY;
   }
 
-  if (setModeState == SET_MODE_OFF) {
+  if ((setModeState == SET_MODE_OFF) || (setModeState == SET_MODE_DUMMY)) {
+    
     animationCalback = &showMatrixAnimation;
 //    animationCalback = &showNoAnimation;
     getRTCData(&t);
         
-    if (t.min != minLastDisplayed) {
+    if ((t.min != minLastDisplayed) || (setModeState == SET_MODE_DUMMY)) {
       minLastDisplayed = t.min;
       showTime(t.hour, t.min);
     }
+    
+    setModeState = SET_MODE_OFF;
     
     if (now - bright_prev > interval) {
       readBrightnessSensor();
@@ -240,56 +238,10 @@ void loop() {
     }
   
   } else {
-     Serial.print(F("setModeState in main loop: "));
-     Serial.println(setModeState);
      animationCalback = &showNoAnimation;
      FastLED.clear();
-     //showTime(t.hour, t.min);
   }
   
-}
-
-void loopReadBT() {
-  char txtbuf[75];     
-  char c;
-  unsigned long now = millis();
-    
-  if (mySerial.available()) {
-    c = (char) mySerial.read();
-    //Serial.write(c);
-    bt_buff[bt_i++] = c;
-    if (bt_i==1) {
-      Serial.println(F("Receiving new data via BT."));
-      bt_prev = now;
-    }
-  }
-  
-  if ((bt_i>0) && (now - bt_prev > interval)) {
-    Serial.println(F("Timeout. Resetting transmission."));
-    bt_i = 0;
-    setModeState = SET_MODE_OFF;
-  }
-  
-  if (bt_i < BT_BUFF_MAX-1) {
-    if (c == BT_END_TOKEN) {
-      bt_buff[bt_i++] = 0;   
-      
-      sprintf(txtbuf, "End Token received. Received %d Bytes Data: ", bt_i-1);
-      Serial.println(txtbuf);
-
-      Serial.println(bt_buff);
-      parseCommand(bt_buff);
-      bt_i = 0;
-      setModeState = SET_MODE_OFF;
-    } 
-  } else {
-    bt_buff[bt_i++] = 0;
-    sprintf(txtbuf, "Buffer overflow: %d Bytes received. Missing end token.", bt_i-1);
-    Serial.println(txtbuf);
-    Serial.println(bt_buff);
-    bt_i = 0;
-    setModeState = SET_MODE_OFF;
-  }
 }
 
 void parseCommand(char* commandstr) {
@@ -304,6 +256,8 @@ void parseCommand(char* commandstr) {
     parseDateTime(&commandstr[3]);
   } else if (strcmp(commandstr, "03") == 0) {
     sendSysInfo();
+  } else if (strcmp(commandstr, "04") == 0) {
+    parseTestLED(&commandstr[3]);
   }
   else {
     Serial.print(F("Unknown command: "));
@@ -342,12 +296,53 @@ void parseConnect(char* con) {
     pch = strtok (NULL, tokens);
   }
   
-  if (i == 1) {
-    Serial.println(arg);
+  if ((i == 1) && (arg == "connect")) {    
+    Serial.println(F("Connected BT"));
     setModeState = SET_MODE_LEDTEST;
+    showSetMode();
+    mySerial.print("OK");
+  } else if ((i == 1) && (arg == "disconnect")) {
+    Serial.println(F("Disconnected BT"));
+    setModeState = SET_MODE_DUMMY;
+    mySerial.print("OK");
   } else {
     char txtbuf [40]; 
     sprintf(txtbuf, "Expecting %d arguments, parsed %d.", 1, i);
+    mySerial.write("ERR");
+    Serial.println(txtbuf);
+  }
+}
+
+void parseTestLED(char* con) {
+  char * pch;
+  int i = 0;
+  char tokens[] = {BT_END_TOKEN, BT_PARAM_SEP, 0};
+  String arg;
+ 
+  pch = strtok(con, tokens);
+
+  while (pch != NULL)
+  {
+    i++;
+    if (i==1) {
+      arg = pch;
+    }
+    pch = strtok (NULL, tokens);
+  }
+  
+  if ((i == 1) && (arg == "on")) {    
+    Serial.println(F("All LED on"));
+    testShowAllWordsSeq();
+    showNoAnimation();
+    mySerial.print("OK");
+  } else if ((i == 1) && (arg == "off")) {
+    Serial.println(F("All LED off"));
+    showSetMode();
+    mySerial.print("OK");
+  } else {
+    char txtbuf [40]; 
+    sprintf(txtbuf, "Expecting %d arguments, parsed %d.", 1, i);
+    mySerial.write("ERR");
     Serial.println(txtbuf);
   }
 }
@@ -384,6 +379,7 @@ void parseDateTime(char* datetime) {
   if (i == 6) {
     DS3231_set(t);
     showTime(t.hour, t.min);
+    mySerial.print("OK");
   } else {
     char buffer [40]; 
     sprintf(buffer, "Expecting %d arguments, parsed %d.", 6, i);
@@ -524,7 +520,6 @@ void showHours(int hours) {
 }
   
 void testShowAllWordsSeq() {
-  FastLED.clear();  
   showWord((byte*) pgm_read_word (&wminutes[0]));
   showWord((byte*) pgm_read_word (&wminutes[1]));
   showWord((byte*) pgm_read_word (&wminutes[2]));
@@ -547,7 +542,7 @@ void testShowAllWordsSeq() {
   showWord((byte*) pgm_read_word (&whours[9])); 
   showWord((byte*) pgm_read_word (&whours[10]));
   showWord((byte*) pgm_read_word (&whours[11]));
-  FastLED.show();  
+  letterMatrix[SETMODE_INDICATOR] = 2;
 }
 
 void showWord(const byte* wordLeds) {
@@ -613,11 +608,19 @@ void printDate(struct ts *t)
    Serial.print(buffer);
 }
 
+void showSetMode() {
+  FastLED.clear();
+  leds[SETMODE_INDICATOR] = CRGB(255,0,0);
+  FastLED.show();
+}
+
 void showNoAnimation() {
   FastLED.clear();
   for(byte i = 0; i < NUM_LEDS; i++) {
       if (letterMatrix[i] == 1) {
           leds[i] = CRGB(255,255,255);
+      } else if (letterMatrix[i] == 2) {
+         leds[i] = CRGB(255,0,0);
       }
   }
   FastLED.show();
