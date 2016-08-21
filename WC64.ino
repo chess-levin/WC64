@@ -22,7 +22,6 @@
 // DS3231 Definitions
 //
 #define BUFF_MAX 128
-//uint8_t time[8];
 char recv[BUFF_MAX];
 unsigned int recv_size = 0;
 
@@ -40,7 +39,7 @@ const bool kMatrixSerpentineLayout = true;
 // Define the array of leds
 CRGB leds[NUM_LEDS];
 // Arduino pin used for LED (WS2812) Data
-#define DATA_PIN 4
+#define LED_DATA_PIN 4
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
@@ -57,16 +56,11 @@ CRGB leds[NUM_LEDS];
 #define BTN_MIN_PRESSTIME 95    //doftware debouncing: ms button to be pressed before action
 #define TIMEOUT_SET_MODE 30000  //ms no button pressed
 
-#define SET_MODE_DUMMY -1
+#define SET_MODE_DISCONNECTED -1
 #define SET_MODE_OFF 0
-#define SET_MODE_LEDTEST 1
-#define SET_MODE_YEAR 2
-#define SET_MODE_MONTH 3
-#define SET_MODE_DAY 4
-#define SET_MODE_HOURS 5
-#define SET_MODE_5MINUTES 6
-#define SET_MODE_1MINUTES 7
-#define SET_MODE_MAX 7
+#define SET_MODE_CONNECTED 1
+#define SET_MODE_LEDTEST 2
+#define SET_MODE_TIME_SET 3
 
 volatile int setModeState = SET_MODE_OFF;
 
@@ -144,8 +138,8 @@ byte averageBrigtnessIdx = 0;
 #define rxPin 10
 #define txPin 11
 
-// set up a new serial port
-SoftwareSerial mySerial =  SoftwareSerial(rxPin, txPin);
+// set up a new serial port for bluetooth
+SoftwareSerial bluetoothSerial =  SoftwareSerial(rxPin, txPin);
 
 unsigned long bt_prev, bright_prev, interval = 5000;
 char uptime[20] = "12.45.78, 12:45:78";
@@ -157,7 +151,7 @@ void setup() {
   Serial.begin(9600);
   pinMode(rxPin, INPUT);
   pinMode(txPin, OUTPUT);  
-  mySerial.begin(9600);
+  bluetoothSerial.begin(9600);
 
   Wire.begin(); // init Wire Library
   DS3231_init(DS3231_INTCN);
@@ -166,7 +160,7 @@ void setup() {
   sprintf(uptime, "%02d.%02d.%04d, %02d:%02d:%02d", t.mday, t.mon, t.year, (uint8_t) t.hour, t.min, t.sec);
   Serial.print(F("Started at")); Serial.println(uptime);
   
-  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(leds, NUM_LEDS);
   FastLED.clear();
   
   pinMode(INTERNAL_LED_PIN, OUTPUT);
@@ -178,12 +172,11 @@ void loop() {
   //FastLED.show();                        // see https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
   unsigned long now = millis();
 
-////////////////
   char txtbuf[75];     
   char c;
     
-  if (mySerial.available()) {
-    c = (char) mySerial.read();
+  if (bluetoothSerial.available()) {
+    c = (char) bluetoothSerial.read();
     //Serial.write(c);
     bt_buff[bt_i++] = c;
     if (bt_i==1) {
@@ -195,7 +188,7 @@ void loop() {
   if ((bt_i>0) && (now - bt_prev > interval)) {
     Serial.println(F("Timeout. Resetting transmission."));
     bt_i = 0;
-    setModeState = SET_MODE_DUMMY;
+    setModeState = SET_MODE_DISCONNECTED;
   }
   
   if (bt_i < BT_BUFF_MAX-1) {
@@ -215,16 +208,21 @@ void loop() {
     Serial.println(txtbuf);
     Serial.println(bt_buff);
     bt_i = 0;
-    setModeState = SET_MODE_DUMMY;
+    setModeState = SET_MODE_DISCONNECTED;
   }
-
-  if ((setModeState == SET_MODE_OFF) || (setModeState == SET_MODE_DUMMY)) {
+  
+  if (SET_MODE_TIME_SET == setModeState) {
+    showTime(t.hour, t.min);
+    setModeState = SET_MODE_CONNECTED;
+  }
+  
+  if ((setModeState == SET_MODE_OFF) || (setModeState == SET_MODE_DISCONNECTED)) {
     
     animationCalback = &showMatrixAnimation;
 //    animationCalback = &showNoAnimation;
     getRTCData(&t);
         
-    if ((t.min != minLastDisplayed) || (setModeState == SET_MODE_DUMMY)) {
+    if ((t.min != minLastDisplayed) || (setModeState == SET_MODE_DISCONNECTED)) {
       minLastDisplayed = t.min;
       showTime(t.hour, t.min);
     }
@@ -275,7 +273,7 @@ void sendSysInfo() {
   sprintf(txtbuf,"Running since %s, Temperatur %s C", uptime, tempbuf);
   Serial.println(txtbuf);  
 
-  mySerial.write(txtbuf);
+  bluetoothSerial.write(txtbuf);
 }
 
 void parseConnect(char* con) {
@@ -298,17 +296,17 @@ void parseConnect(char* con) {
   
   if ((i == 1) && (arg == "connect")) {    
     Serial.println(F("Connected BT"));
-    setModeState = SET_MODE_LEDTEST;
+    setModeState = SET_MODE_CONNECTED;
     showSetMode();
-    mySerial.print("OK");
+    bluetoothSerial.print("OK");
   } else if ((i == 1) && (arg == "disconnect")) {
     Serial.println(F("Disconnected BT"));
-    setModeState = SET_MODE_DUMMY;
-    mySerial.print("OK");
+    setModeState = SET_MODE_DISCONNECTED;
+    bluetoothSerial.print("OK");
   } else {
     char txtbuf [40]; 
     sprintf(txtbuf, "Expecting %d arguments, parsed %d.", 1, i);
-    mySerial.write("ERR");
+    bluetoothSerial.write("ERR");
     Serial.println(txtbuf);
   }
 }
@@ -332,17 +330,20 @@ void parseTestLED(char* con) {
   
   if ((i == 1) && (arg == "on")) {    
     Serial.println(F("All LED on"));
+    setModeState = SET_MODE_LEDTEST;
     testShowAllWordsSeq();
     showNoAnimation();
-    mySerial.print("OK");
+    resetLetterMatrix();
+    bluetoothSerial.print("OK");
   } else if ((i == 1) && (arg == "off")) {
     Serial.println(F("All LED off"));
+    setModeState = SET_MODE_CONNECTED;
     showSetMode();
-    mySerial.print("OK");
+    bluetoothSerial.print("OK");
   } else {
     char txtbuf [40]; 
     sprintf(txtbuf, "Expecting %d arguments, parsed %d.", 1, i);
-    mySerial.write("ERR");
+    bluetoothSerial.write("ERR");
     Serial.println(txtbuf);
   }
 }
@@ -378,8 +379,8 @@ void parseDateTime(char* datetime) {
   
   if (i == 6) {
     DS3231_set(t);
-    showTime(t.hour, t.min);
-    mySerial.print("OK");
+    bluetoothSerial.print("OK");
+    setModeState = SET_MODE_TIME_SET;
   } else {
     char buffer [40]; 
     sprintf(buffer, "Expecting %d arguments, parsed %d.", 6, i);
