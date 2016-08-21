@@ -264,13 +264,13 @@ void parseCommand(char* commandstr) {
 }
 
 void sendSysInfo() {
-  char txtbuf [60];
+  char txtbuf [80];
   char tempbuf[6];
 
   float t = DS3231_get_treg();
   
   dtostrf(t, 4, 2, tempbuf);
-  sprintf(txtbuf,"Running since %s, Temperatur %s C", uptime, tempbuf);
+  sprintf(txtbuf,"Running since %s, Temperatur %s C, Brightness %d/%d", uptime, tempbuf, readBrightnessSensor(), MAX_BRIGHTNESS);
   Serial.println(txtbuf);  
 
   bluetoothSerial.write(txtbuf);
@@ -556,7 +556,7 @@ void showWord(const byte* wordLeds) {
   }
 }
 
-void readBrightnessSensor() {
+int  readBrightnessSensor() {
   char buffer[26];
   int sum = 0;
 
@@ -583,6 +583,8 @@ void readBrightnessSensor() {
 
   sprintf(buffer, "Brightness %d => %d", average, brightnessVal);
   Serial.println(buffer);
+  
+  return brightnessVal;
 }
 
 void printRTCDataStruct(struct ts *t) {
